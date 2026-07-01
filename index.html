@@ -9,9 +9,114 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+    <!-- Firebase SDK (Modular) with Service Functions -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPK1LM-6ekEC6FVfRGFgdq7sFLOBRKnKU",
+            authDomain: "internal-audit-clinic.firebaseapp.com",
+            projectId: "internal-audit-clinic",
+            storageBucket: "internal-audit-clinic.firebasestorage.app",
+            messagingSenderId: "316370804867",
+            appId: "1:316370804867:web:fbd3c04e5ebfe7a13ffbb6"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const COLLECTION_NAME = "audit_issues";
+        
+        // ✅ ទាញយក ទិន្នន័យទាំងអស់ ពី Firebase
+        window.loadAuditDataFromFirebase = async function() {
+            try {
+                const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+                const data = [];
+                querySnapshot.forEach(document => {
+                    data.push({ id: document.id, ...document.data() });
+                });
+                console.log("✅ Firebase: Loaded", data.length, "records");
+                return data;
+            } catch (error) {
+                console.error("Error loading data:", error);
+                if (window.showToast) showToast("❌ មិនអាចទាញយក ទិន្នន័យពីលើ Firebase បានទេ");
+                return [];
+            }
+        };
+
+        // ✅ បន្ថែម ធាតុថ្មី ទៅ Firebase
+        window.addAuditDataToFirebase = async function(entry) {
+            try {
+                const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+                    dept: entry.dept,
+                    problem: entry.problem,
+                    solution: entry.solution,
+                    pic: entry.pic,
+                    status: entry.status,
+                    date: entry.date,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+                console.log("✅ Firebase: Document added with ID:", docRef.id);
+                if (window.showToast) showToast("✅ បន្ថែមបញ្ហាថ្មីដោយជោគជ័យ!");
+                return docRef.id;
+            } catch (error) {
+                console.error("Error adding document:", error);
+                if (window.showToast) showToast("❌ មិនអាចបន្ថែមទិន្នន័យក្នុង Firebase បានទេ");
+                return null;
+            }
+        };
+
+        // ✅ កែសម្រួល ធាតុក្នុង Firebase
+        window.updateAuditDataInFirebase = async function(docId, entry) {
+            try {
+                await updateDoc(doc(db, COLLECTION_NAME, docId), {
+                    dept: entry.dept,
+                    problem: entry.problem,
+                    solution: entry.solution,
+                    pic: entry.pic,
+                    status: entry.status,
+                    date: entry.date,
+                    updatedAt: serverTimestamp()
+                });
+                console.log("✅ Firebase: Document updated:", docId);
+                if (window.showToast) showToast("✅ កែសម្រួលដោយជោគជ័យ!");
+                return true;
+            } catch (error) {
+                console.error("Error updating document:", error);
+                if (window.showToast) showToast("❌ មិនអាចកែសម្រួលបានទេ");
+                return false;
+            }
+        };
+
+        // ✅ លុប ធាតុ ពីលើ Firebase
+        window.deleteAuditDataFromFirebase = async function(docId) {
+            try {
+                await deleteDoc(doc(db, COLLECTION_NAME, docId));
+                console.log("✅ Firebase: Document deleted:", docId);
+                if (window.showToast) showToast("✅ លុបដោយជោគជ័យ!");
+                return true;
+            } catch (error) {
+                console.error("Error deleting document:", error);
+                if (window.showToast) showToast("❌ មិនអាចលុបបានទេ");
+                return false;
+            }
+        };
+
+        // ✅ ពិនិត្យ Duplicate ក្នុង Firebase
+        window.checkDuplicateInFirebase = async function(dept, problem) {
+            try {
+                const q = query(collection(db, COLLECTION_NAME), where("dept", "==", dept), where("problem", "==", problem));
+                const querySnapshot = await getDocs(q);
+                return querySnapshot.size > 0;
+            } catch (error) {
+                console.error("Error checking duplicate:", error);
+                return false;
+            }
+        };
+
+        console.log("✅ Firebase initialized successfully!");
+    </script>
 
     <style>
         body { font-family: 'Kantumruy Pro', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
@@ -237,7 +342,6 @@
     </div>
 
     <!-- Firebase Config & Services -->
-    <script src="./firebase-config.js"></script>
     <script src="./firebase-service.js"></script>
 
     <script>
