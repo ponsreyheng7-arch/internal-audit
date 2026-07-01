@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ប្រព័ន្ធសវនកម្ម - គ្លីនិកភ្នែកភ្នំពេញ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Kantumruy Pro', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in; }
+        #toast-message { transition: all 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .nav-btn { position: relative; overflow: hidden; }
+        .nav-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: rgba(255,255,255,0.1); transition: left 0.3s; }
+        .nav-btn:hover::before { left: 100%; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: transform 0.3s, box-shadow 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); }
+        .stat-card.done { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-card.done:hover { box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4); }
+        input, textarea, select { transition: all 0.3s !important; }
+        input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important; border-color: #667eea !important; }
+    </style>
+</head>
+<body class="min-h-screen flex text-slate-800">
+
+    <div id="toast-message" class="hidden fixed top-5 right-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-lg shadow-xl z-[100] flex items-center gap-3">
+        <i class="fa-solid fa-check-circle"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <aside class="w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-slate-200 p-6 flex flex-col shadow-2xl">
+        <h1 class="text-white font-bold text-2xl mb-8 flex items-center gap-3 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Audit App</h1>
+        <nav class="space-y-3 flex-1">
+            <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-chart-line mr-3 text-cyan-400"></i> ផ្ទាំងគ្រប់គ្រង</button>
+            <button onclick="switchTab('registry')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-list mr-3 text-blue-400"></i> បញ្ជីបញ្ហា</button>
+            <button onclick="switchTab('excel')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-file-import mr-3 text-purple-400"></i> នាំចូល CSV</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <header class="mb-8 flex justify-between items-center">
+            <h2 id="page-title" class="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">ផ្ទាំងគ្រប់គ្រង</h2>
+            <div id="search-box" class="hidden relative">
+                <input type="text" id="search-input" onkeyup="renderTable()" placeholder="ស្វែងរកបញ្ហា..." class="pl-10 pr-4 py-2.5 border-2 border-slate-300 rounded-lg text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400"></i>
+            </div>
+        </header>
+
+        <section id="tab-dashboard" class="tab-content active">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="stat-card text-white p-6 rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-white/80 text-xs uppercase font-bold tracking-wider">បញ្ហាសរុប</p>
+                            <p id="stat-total" class="text-5xl font-bold mt-3">0</p>
+                        </div>
+                        <i class="fa-solid fa-list-check text-4xl opacity-20"></i>
+                    </div>
+                </div>
+                <div class="stat-card done text-white p-6 rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-white/80 text-xs uppercase font-bold tracking-wider">ដោះស្រាយរួច</p>
+                            <p id="stat-done" class="text-5xl font-bold mt-3">0</p>
+                        </div>
+                        <i class="fa-solid fa-circle-check text-4xl opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-purple-500 to-indigo-600 text-white p-6 rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-white/80 text-xs uppercase font-bold tracking-wider">ក្នុងដំណើរការ</p>
+                            <p id="stat-pending" class="text-5xl font-bold mt-3">0</p>
+                        </div>
+                        <i class="fa-solid fa-hourglass-end text-4xl opacity-20"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-registry" class="tab-content">
+            <div class="mb-6 flex justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <select id="dept-filter" onchange="renderTable()" class="px-4 py-2.5 border-2 border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition">
+                    <option value="">ទាំងអស់ផ្នែក</option>
+                </select>
+                <button onclick="openAddModal()" class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 transform hover:scale-105"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
+                        <tr>
+                            <th class="p-4 text-left font-semibold">ផ្នែក</th>
+                            <th class="p-4 text-left font-semibold">បញ្ហា</th>
+                            <th class="p-4 text-left font-semibold">ដំណោះស្រាយ</th>
+                            <th class="p-4 text-left font-semibold">អ្នកទទួលខុសត្រូវ</th>
+                            <th class="p-4 text-left font-semibold">ស្ថានភាព</th>
+                            <th class="p-4 text-left font-semibold">កាលបរិច្ឆេទ</th>
+                            <th class="p-4 text-left font-semibold">សកម្មភាព</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="tab-excel" class="tab-content">
+            <div class="max-w-4xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-10 rounded-2xl border-2 border-dashed border-blue-300 text-center shadow-lg hover:shadow-xl transition">
+                        <i class="fa-solid fa-file-csv text-6xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-6"></i>
+                        <h3 class="font-bold text-2xl mb-3 text-slate-800">នាំចូលឯកសារ CSV</h3>
+                        <p class="text-sm text-slate-600 mb-2">ចូលមើលឯកសារ CSV របស់អ្នក</p>
+                        <p class="text-xs text-slate-500 mb-6">ឯកសារត្រូវមាន: ផ្នែក, បញ្ហា, ដំណោះស្រាយ, អ្នកទទួលខុសត្រូវ, ស្ថានភាព, កាលបរិច្ឆេទ</p>
+                        <input type="file" id="file-input" class="hidden" accept=".csv">
+                        <button onclick="document.getElementById('file-input').click()" class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-xl text-sm font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full"><i class="fa-solid fa-upload mr-2"></i>ជ្រើសរើសឯកសារ CSV</button>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-10 rounded-2xl border-2 border-slate-200 shadow-lg">
+                        <h3 class="font-bold text-2xl mb-4 text-slate-800"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>ព័ត៌មាន</h3>
+                        <ul class="space-y-3 text-sm text-slate-700">
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check text-emerald-500 mt-1 flex-shrink-0"></i>
+                                <span>ឯកសារត្រូវតែមាន Header row ដែលមាន: ផ្នែក, បញ្ហា, ដំណោះស្រាយ</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check text-emerald-500 mt-1 flex-shrink-0"></i>
+                                <span>ប្រព័ន្ធនឹងពិនិត្យស្វ័យប្រវត្តិដើម្បីរកទិន្នន័យស្ទួយ</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check text-emerald-500 mt-1 flex-shrink-0"></i>
+                                <span>អ្នកអាចជ្រើសរើងឆ្លងកាត់ស្ទួយឬនាំចូលទាំងអស់</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fa-solid fa-check text-emerald-500 mt-1 flex-shrink-0"></i>
+                                <span>ទិន្នន័យនឹងរក្សាទុកក្នុង LocalStorage ដោយស្វ័យប្រវត្តិ</span>
+                            </li>
+                        </ul>
+                        <div class="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                            <p class="text-xs text-blue-700"><strong>💡 គន្លឹះ:</strong> នៅពេលដែលអ្នកនាំចូលឯកសារ ប្រព័ន្ធនឹងពិនិត្យដើម្បីឃើញទិន្នន័យស្ទួយ ហើយសាកល្បងឱ្យអ្នក</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals (Add, Edit, Delete) -->
+    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">បន្ថែមបញ្ហាថ្មី</h3>
+            <div class="space-y-4">
+                <input type="text" id="add-dept" placeholder="ផ្នែក" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <textarea id="add-problem" placeholder="បញ្ហា" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none" rows="3"></textarea>
+                <textarea id="add-solution" placeholder="ដំណោះស្រាយ" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none" rows="3"></textarea>
+                <input type="text" id="add-pic" placeholder="អ្នកទទួលខុសត្រូវ" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="add-status" placeholder="ស្ថានភាព" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="date" id="add-date" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeModal('add-modal')" class="px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">បោះបង់</button>
+                <button onclick="saveNewEntry()" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium hover:shadow-lg transition">រក្សាទុក</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Delete Modals... -->
+    <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">កែសម្រួលបញ្ហា</h3>
+            <input type="hidden" id="edit-index">
+            <div class="space-y-4">
+                <input type="text" id="edit-dept" placeholder="ផ្នែក" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <textarea id="edit-problem" placeholder="បញ្ហា" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none" rows="3"></textarea>
+                <textarea id="edit-solution" placeholder="ដំណោះស្រាយ" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none" rows="3"></textarea>
+                <input type="text" id="edit-pic" placeholder="អ្នកទទួលខុសត្រូវ" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="text" id="edit-status" placeholder="ស្ថានភាព" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <input type="date" id="edit-date" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeModal('edit-modal')" class="px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">បោះបង់</button>
+                <button onclick="saveEdit()" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium hover:shadow-lg transition">រក្សាទុក</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-sm shadow-2xl text-center border border-slate-100">
+            <i class="fa-solid fa-exclamation-circle text-5xl text-red-500 mb-4"></i>
+            <h3 class="text-2xl font-bold mb-3 text-slate-800">លុបទិន្នន័យ</h3>
+            <p class="text-sm text-slate-600 mb-6">តើអ្នកពិតជាចង់លុបទិន្នន័យនេះមែនទេ? ក្រុមហ៊ុននេះមិនអាចត្រឡប់វិញបានទេ។</p>
+            <input type="hidden" id="delete-index">
+            <div class="flex justify-center gap-3">
+                <button onclick="closeModal('delete-modal')" class="px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">បោះបង់</button>
+                <button onclick="confirmDelete()" class="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg font-medium hover:shadow-lg transition">លុប</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Duplicate Check on Import -->
+    <div id="duplicate-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-100 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-slate-800">ពិនិត្យទិន្នន័យ CSV</h3>
+                <button onclick="closeModal('duplicate-modal')" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+            </div>
+            <div id="duplicate-content" class="space-y-4">
+                <!-- Duplicate warnings will be shown here -->
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeModal('duplicate-modal')" class="px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">បោះបង់</button>
+                <button onclick="confirmDuplicateImport(true)" class="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-medium hover:shadow-lg transition"><i class="fa-solid fa-filter mr-2"></i>ឆ្លងកាត់ស្ទួយ</button>
+                <button onclick="confirmDuplicateImport(false)" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium hover:shadow-lg transition"><i class="fa-solid fa-upload mr-2"></i>នាំចូលទាំងអស់</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let auditData = JSON.parse(localStorage.getItem('auditData')) || [];
+
+        function saveToLocalStorage() {
+            localStorage.setItem('auditData', JSON.stringify(auditData));
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            document.getElementById('page-title').innerText = id === 'dashboard' ? 'ផ្ទាំងគ្រប់គ្រង' : (id === 'registry' ? 'បញ្ជីបញ្ហា' : 'នាំចូលទិន្នន័យ');
+            document.getElementById('search-box').classList.toggle('hidden', id !== 'registry');
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function openAddModal() {
+            document.getElementById('add-dept').value = '';
+            document.getElementById('add-problem').value = '';
+            document.getElementById('add-solution').value = '';
+            document.getElementById('add-pic').value = '';
+            document.getElementById('add-status').value = '';
+            document.getElementById('add-date').value = '';
+            document.getElementById('add-modal').classList.remove('hidden');
+        }
+
+        function saveNewEntry() {
+            const prob = document.getElementById('add-problem').value;
+            if(!prob) { alert("សូមបំពេញបញ្ហា!"); return; }
+            
+            const newEntry = {
+                dept: document.getElementById('add-dept').value || '-',
+                problem: prob,
+                solution: document.getElementById('add-solution').value || '-',
+                pic: document.getElementById('add-pic').value || '-',
+                status: document.getElementById('add-status').value || '-',
+                date: document.getElementById('add-date').value || '-'
+            };
+            auditData.push(newEntry);
+            saveToLocalStorage();
+            closeModal('add-modal');
+            renderTable();
+            showToast("បានបន្ថែមបញ្ហាថ្មីជោគជ័យ!");
+        }
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                parseExcelData(json);
+                e.target.value = ''; // Reset file input
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function parseExcelData(rows) {
+            let headerRowIndex = rows.findIndex(row => row.some(cell => String(cell).includes('ផ្នែក')));
+            if (headerRowIndex === -1) { showToast("រកមិនឃើញ Header!"); return; }
+            const headers = rows[headerRowIndex];
+            
+            const newEntries = rows.slice(headerRowIndex + 1).map(row => ({
+                dept: row[headers.findIndex(h => String(h).includes('ផ្នែក'))] || '-',
+                problem: row[headers.findIndex(h => String(h).includes('បញ្ហា'))] || '-',
+                solution: row[headers.findIndex(h => String(h).includes('ដំណោះស្រាយ'))] || '-',
+                pic: row[headers.findIndex(h => String(h).includes('អ្នកទទួលខុសត្រូវ'))] || '-',
+                status: row[headers.findIndex(h => String(h).includes('ស្ថានភាព'))] || '-',
+                date: row[headers.findIndex(h => String(h).includes('កាលបរិច្ឆេទ'))] || '-'
+            })).filter(item => item.problem !== '-');
+
+            // Check for duplicates between new entries and existing data
+            const duplicates = [];
+            newEntries.forEach((newItem, newIdx) => {
+                const newKey = `${newItem.dept}|${newItem.problem}`.toLowerCase();
+                
+                // Check against existing data
+                auditData.forEach((existingItem, existIdx) => {
+                    const existKey = `${existingItem.dept}|${existingItem.problem}`.toLowerCase();
+                    if (newKey === existKey) {
+                        duplicates.push({
+                            type: 'existing',
+                            newIdx: newIdx,
+                            existIdx: existIdx,
+                            dept: newItem.dept,
+                            problem: newItem.problem,
+                            existing: existingItem
+                        });
+                    }
+                });
+
+                // Check against other new entries
+                for (let i = 0; i < newIdx; i++) {
+                    const otherKey = `${newEntries[i].dept}|${newEntries[i].problem}`.toLowerCase();
+                    if (newKey === otherKey) {
+                        duplicates.push({
+                            type: 'internal',
+                            indices: [i, newIdx],
+                            dept: newItem.dept,
+                            problem: newItem.problem
+                        });
+                    }
+                }
+            });
+
+            // If duplicates found, show confirmation
+            if (duplicates.length > 0) {
+                showDuplicateWarning(newEntries, duplicates);
+            } else {
+                // No duplicates, proceed with import
+                auditData = [...auditData, ...newEntries];
+                saveToLocalStorage();
+                renderTable();
+                switchTab('registry');
+                showToast("បាននាំចូលទិន្នន័យជោគជ័យ!");
+            }
+        }
+
+        function showDuplicateWarning(newEntries, duplicates) {
+            window.pendingNewEntries = newEntries;
+            window.foundDuplicates = duplicates;
+
+            const content = document.getElementById('duplicate-content');
+            content.innerHTML = `
+                <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500 mb-4">
+                    <p class="text-yellow-700 font-bold"><i class="fa-solid fa-exclamation-triangle mr-2"></i>រកឃើញទិន្នន័យស្ទួយ!</p>
+                    <p class="text-sm text-yellow-600">ទិន្នន័យដែលនាំចូលមាន ${duplicates.length} ធាតុដែលស្ទួយគ្នា៖</p>
+                </div>
+                ${duplicates.map((dup, idx) => `
+                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                        <p class="text-sm font-bold text-red-700 mb-2"><i class="fa-solid fa-copy mr-2"></i>ស្ទួយ #${idx + 1}</p>
+                        <p class="text-sm text-slate-700"><strong>ផ្នែក:</strong> ${dup.dept}</p>
+                        <p class="text-sm text-slate-700 mb-2"><strong>បញ្ហា:</strong> ${dup.problem}</p>
+                        ${dup.type === 'existing' ? `<p class="text-xs text-orange-600">មាននៅក្នុងប្រព័ន្ធរួច</p>` : ''}
+                    </div>
+                `).join('')}
+            `;
+
+            document.getElementById('duplicate-modal').classList.remove('hidden');
+        }
+
+        function confirmDuplicateImport(skipDuplicates = false) {
+            if (!window.pendingNewEntries) return;
+
+            let entriesToAdd = window.pendingNewEntries;
+
+            if (skipDuplicates && window.foundDuplicates) {
+                const duplicateIndices = new Set();
+                window.foundDuplicates.forEach(dup => {
+                    if (dup.type === 'internal' || dup.type === 'existing') {
+                        duplicateIndices.add(dup.newIdx || dup.indices[0]);
+                    }
+                });
+                entriesToAdd = window.pendingNewEntries.filter((_, idx) => !duplicateIndices.has(idx));
+            }
+
+            auditData = [...auditData, ...entriesToAdd];
+            saveToLocalStorage();
+            renderTable();
+            switchTab('registry');
+            closeModal('duplicate-modal');
+            showToast(`បាននាំចូលទិន្នន័យ ${entriesToAdd.length} ធាតុ (ឆ្លងកាត់ ${window.pendingNewEntries.length - entriesToAdd.length} ស្ទួយ)`);
+            
+            window.pendingNewEntries = null;
+            window.foundDuplicates = null;
+        }
+
+        function renderTable() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const selectedDept = document.getElementById('dept-filter').value;
+            
+            const filteredData = auditData.filter(i => 
+                (i.dept.toLowerCase().includes(searchTerm) || i.problem.toLowerCase().includes(searchTerm)) &&
+                (selectedDept === '' || i.dept === selectedDept)
+            );
+
+            // Update department filter options
+            const uniqueDepts = [...new Set(auditData.map(i => i.dept))].filter(d => d !== '-');
+            const deptFilter = document.getElementById('dept-filter');
+            const currentValue = deptFilter.value;
+            deptFilter.innerHTML = '<option value="">ទាំងអស់ផ្នែក</option>' + 
+                uniqueDepts.map(d => `<option value="${d}">${d}</option>`).join('');
+            deptFilter.value = currentValue;
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = filteredData.map((item, index) => {
+                const actualIndex = auditData.indexOf(item);
+                const statusColor = item.status.includes('ដោះស្រាយ') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+                return `
+                <tr class="border-b border-slate-100 hover:bg-blue-50 transition duration-200">
+                    <td class="p-4 font-medium text-slate-700">${item.dept}</td>
+                    <td class="p-4 text-slate-700">${item.problem}</td>
+                    <td class="p-4 text-slate-700">${item.solution}</td>
+                    <td class="p-4 text-slate-700">${item.pic}</td>
+                    <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-medium ${statusColor}">${item.status}</span></td>
+                    <td class="p-4 text-slate-700">${item.date}</td>
+                    <td class="p-4">
+                        <button onclick="editItem(${actualIndex})" class="text-blue-500 hover:text-blue-700 font-medium mr-3 transition"><i class="fa-solid fa-pen-to-square mr-1"></i>កែសម្រួល</button>
+                        <button onclick="deleteItem(${actualIndex})" class="text-red-500 hover:text-red-700 font-medium transition"><i class="fa-solid fa-trash-can mr-1"></i>លុប</button>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+            
+            document.getElementById('stat-total').innerText = auditData.length;
+            document.getElementById('stat-done').innerText = auditData.filter(i => i.status.includes('ដោះស្រាយ')).length;
+            
+            // Calculate pending and percentage
+            const doneCount = auditData.filter(i => i.status.includes('ដោះស្រាយ')).length;
+            const pendingCount = auditData.length - doneCount;
+            const percentage = auditData.length === 0 ? 0 : Math.round((doneCount / auditData.length) * 100);
+            
+            document.getElementById('stat-pending').innerText = pendingCount;
+            document.getElementById('stat-percentage').innerText = percentage + '%';
+        }
+
+        // Functions for Edit/Delete remain the same as previously established
+        function editItem(index) {
+            const item = auditData[index];
+            document.getElementById('edit-index').value = index;
+            document.getElementById('edit-dept').value = item.dept;
+            document.getElementById('edit-problem').value = item.problem;
+            document.getElementById('edit-solution').value = item.solution;
+            document.getElementById('edit-pic').value = item.pic;
+            document.getElementById('edit-status').value = item.status;
+            document.getElementById('edit-date').value = item.date;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function saveEdit() {
+            const index = document.getElementById('edit-index').value;
+            auditData[index] = {
+                dept: document.getElementById('edit-dept').value,
+                problem: document.getElementById('edit-problem').value,
+                solution: document.getElementById('edit-solution').value,
+                pic: document.getElementById('edit-pic').value,
+                status: document.getElementById('edit-status').value,
+                date: document.getElementById('edit-date').value
+            };
+            saveToLocalStorage();
+            closeModal('edit-modal');
+            renderTable();
+        }
+
+        function deleteItem(index) {
+            document.getElementById('delete-index').value = index;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        function confirmDelete() {
+            const index = document.getElementById('delete-index').value;
+            auditData.splice(index, 1);
+            saveToLocalStorage();
+            closeModal('delete-modal');
+            renderTable();
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "audit-system-clinic",
+  "version": "1.0.0",
+  "description": "Internal Audit System for Phnom Penh Eye Clinic",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "build": "echo 'No build step needed'"
+  },
+  "keywords": ["audit", "clinic", "management"],
+  "author": "Phnom Penh Eye Clinic",
+  "license": "MIT"
+}
