@@ -8,6 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
 
     <style>
         body { font-family: 'Kantumruy Pro', sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
@@ -96,9 +100,12 @@
 
         <section id="tab-registry" class="tab-content">
             <div class="mb-6 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100">
-                <select id="dept-filter" onchange="renderTable()" class="px-4 py-2.5 border-2 border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition">
-                    <option value="">ទាំងអស់ផ្នែក</option>
-                </select>
+                <div class="flex flex-col md:flex-row gap-2 md:gap-3 flex-1">
+                    <select id="dept-filter" onchange="renderTable()" class="px-4 py-2.5 border-2 border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white transition">
+                        <option value="">ទាំងអស់ផ្នែក</option>
+                    </select>
+                    <button onclick="exportToExcelAll()" class="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 md:px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 text-sm md:text-base whitespace-nowrap"><i class="fa-solid fa-download mr-2"></i>នាំចេញ Excel (ទាំងអស់)</button>
+                </div>
                 <button onclick="openAddModal()" class="bg-gradient-to-r from-teal-600 to-teal-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full md:w-auto"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
             </div>
             <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-x-auto">
@@ -229,8 +236,26 @@
         </div>
     </div>
 
+    <!-- Firebase Config & Services -->
+    <script src="./firebase-config.js"></script>
+    <script src="./firebase-service.js"></script>
+
     <script>
-        let auditData = JSON.parse(localStorage.getItem('auditData')) || [];
+        let auditData = [];
+        let isFirebaseReady = false;
+
+        // Initialize Firebase and load data
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                auditData = await loadAuditDataFromFirebase();
+                isFirebaseReady = true;
+                renderTable();
+                showToast("✅ ឯកសារ Firebase បានផ្ទុក!");
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                showToast("⚠️ មិនអាចភ្ជាប់ Firebase បានទេ");
+            }
+        });
 
         // Mobile Menu Toggle
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -254,7 +279,8 @@
         });
 
         function saveToLocalStorage() {
-            localStorage.setItem('auditData', JSON.stringify(auditData));
+            // Not used anymore - Firebase handles data persistence
+            console.log("Data saved to Firebase");
         }
 
         function showToast(message) {
@@ -284,22 +310,44 @@
         }
 
         function saveNewEntry() {
+            const dept = document.getElementById('add-dept').value || '-';
             const prob = document.getElementById('add-problem').value;
-            if(!prob) { alert("សូមបំពេញបញ្ហា!"); return; }
+            if(!prob) { showToast("❌ សូមបំពេញបញ្ហា!"); return; }
+            
+            const newKey = `${dept}|${prob}`.toLowerCase();
+            
+            // Check for duplicates
+            const isDuplicate = auditData.some(item => {
+                const existKey = `${item.dept}|${item.problem}`.toLowerCase();
+                return newKey === existKey;
+            });
+            
+            if (isDuplicate) {
+                showToast("⚠️ ទិន្នន័យនេះស្ទួយនឹងទិន្នន័យដែលមាននៅក្នុងប្រព័ន្ធរួច!");
+                return;
+            }
             
             const newEntry = {
-                dept: document.getElementById('add-dept').value || '-',
+                dept: dept,
                 problem: prob,
                 solution: document.getElementById('add-solution').value || '-',
                 pic: document.getElementById('add-pic').value || '-',
                 status: document.getElementById('add-status').value || '-',
                 date: document.getElementById('add-date').value || '-'
             };
-            auditData.push(newEntry);
-            saveToLocalStorage();
-            closeModal('add-modal');
-            renderTable();
-            showToast("បានបន្ថែមបញ្ហាថ្មីជោគជ័យ!");
+            
+            // Save to Firebase
+            if (isFirebaseReady) {
+                addAuditDataToFirebase(newEntry).then(() => {
+                    closeModal('add-modal');
+                    loadAuditDataFromFirebase().then(() => {
+                        renderTable();
+                        showToast("✅ បានបន្ថែមបញ្ហាថ្មីក្នុង Firebase!");
+                    });
+                });
+            } else {
+                showToast("❌ Firebase មិនរៀងរាល់ទេ។ សូមព្យាយាមម្តងទៀត");
+            }
         }
 
         document.getElementById('file-input').addEventListener('change', (e) => {
@@ -492,17 +540,43 @@
 
         function saveEdit() {
             const index = document.getElementById('edit-index').value;
-            auditData[index] = {
-                dept: document.getElementById('edit-dept').value,
-                problem: document.getElementById('edit-problem').value,
+            const newDept = document.getElementById('edit-dept').value;
+            const newProblem = document.getElementById('edit-problem').value;
+            const newKey = `${newDept}|${newProblem}`.toLowerCase();
+            
+            // Check for duplicates with other entries
+            const isDuplicate = auditData.some((item, idx) => {
+                if (idx == index) return false; // Skip the current item
+                const existKey = `${item.dept}|${item.problem}`.toLowerCase();
+                return newKey === existKey;
+            });
+            
+            if (isDuplicate) {
+                showToast("⚠️ ទិន្នន័យនេះស្ទួយនឹងទិន្នន័យដែលមាននៅក្នុងប្រព័ន្ធរួច!");
+                return;
+            }
+            
+            const updatedEntry = {
+                dept: newDept,
+                problem: newProblem,
                 solution: document.getElementById('edit-solution').value,
                 pic: document.getElementById('edit-pic').value,
                 status: document.getElementById('edit-status').value,
                 date: document.getElementById('edit-date').value
             };
-            saveToLocalStorage();
-            closeModal('edit-modal');
-            renderTable();
+            
+            // Update in Firebase
+            if (isFirebaseReady && auditData[index].id) {
+                updateAuditDataInFirebase(auditData[index].id, updatedEntry).then(() => {
+                    closeModal('edit-modal');
+                    loadAuditDataFromFirebase().then(() => {
+                        renderTable();
+                        showToast("✅ បានកែសម្រួលបញ្ហាក្នុង Firebase!");
+                    });
+                });
+            } else {
+                showToast("❌ Firebase មិនរៀងរាល់ទេ។ សូមព្យាយាមម្តងទៀត");
+            }
         }
 
         function deleteItem(index) {
@@ -512,10 +586,19 @@
 
         function confirmDelete() {
             const index = document.getElementById('delete-index').value;
-            auditData.splice(index, 1);
-            saveToLocalStorage();
-            closeModal('delete-modal');
-            renderTable();
+            const docId = auditData[index].id;
+            
+            if (isFirebaseReady && docId) {
+                deleteAuditDataFromFirebase(docId).then(() => {
+                    closeModal('delete-modal');
+                    loadAuditDataFromFirebase().then(() => {
+                        renderTable();
+                        showToast("✅ បានលុបបញ្ហាចេញពី Firebase!");
+                    });
+                });
+            } else {
+                showToast("❌ Firebase មិនរៀងរាល់ទេ។ សូមព្យាយាមម្តងទៀត");
+            }
         }
 
         renderTable();
