@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ប្រព័ន្ធសវនកម្ម - គ្លីនិកភ្នែកភ្នំពេញ</title>
+    <title>ប្រព័ន្ធសវនកម្ម - គ្លីនិកភ្នែកភ្នំពេញ | Phnom Penh Eye Clinic Audit System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,12 +18,12 @@
         .nav-btn { position: relative; overflow: hidden; }
         .nav-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: rgba(255,255,255,0.1); transition: left 0.3s; }
         .nav-btn:hover::before { left: 100%; }
-        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: transform 0.3s, box-shadow 0.3s; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4); }
-        .stat-card.done { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .stat-card.done:hover { box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4); }
+        .stat-card { background: linear-gradient(135deg, #0a5f4f 0%, #1a7f6f 100%); transition: transform 0.3s, box-shadow 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(10, 95, 79, 0.4); }
+        .stat-card.done { background: linear-gradient(135deg, #b8860b 0%, #cd853f 100%); }
+        .stat-card.done:hover { box-shadow: 0 10px 30px rgba(184, 134, 11, 0.4); }
         input, textarea, select { transition: all 0.3s !important; }
-        input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important; border-color: #667eea !important; }
+        input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px rgba(10, 95, 79, 0.1) !important; border-color: #0a5f4f !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col md:flex-row text-slate-800">
@@ -42,11 +42,14 @@
     <div id="mobile-menu-overlay" class="hidden md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"></div>
 
     <aside id="sidebar" class="hidden md:flex w-full md:w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-slate-200 p-6 flex flex-col shadow-2xl fixed md:static inset-0 z-35 md:z-0">
-        <h1 class="text-white font-bold text-2xl mb-8 flex items-center gap-3 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"><i class="fa-solid fa-chart-pie text-cyan-400"></i> Audit App</h1>
+        <div class="text-white font-bold text-lg md:text-xl mb-6 flex items-center justify-center">
+            <img src="./LOGO NEW OPTION CODE.png" alt="PHNOM PENH Eye Clinic" class="h-16 md:h-20 w-auto object-contain">
+        </div>
+        <h2 class="text-center text-xs md:text-sm font-bold text-teal-300 mb-6 px-2">ប្រព័ន្ធសវនកម្ម</h2>
         <nav class="space-y-3 flex-1">
-            <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-chart-line mr-3 text-cyan-400"></i> ផ្ទាំងគ្រប់គ្រង</button>
-            <button onclick="switchTab('registry')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-list mr-3 text-blue-400"></i> បញ្ជីបញ្ហា</button>
-            <button onclick="switchTab('excel')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-file-import mr-3 text-purple-400"></i> នាំចូល CSV</button>
+            <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-chart-line mr-3 text-teal-400"></i> ផ្ទាំងគ្រប់គ្រង</button>
+            <button onclick="switchTab('registry')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-list mr-3 text-amber-400"></i> បញ្ជីបញ្ហា</button>
+            <button onclick="switchTab('excel')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-file-import mr-3 text-amber-600"></i> នាំចូល CSV</button>
         </nav>
     </aside>
 
@@ -79,7 +82,7 @@
                         <i class="fa-solid fa-circle-check text-2xl md:text-4xl opacity-20"></i>
                     </div>
                 </div>
-                <div class="bg-gradient-to-br from-purple-500 to-indigo-600 text-white p-4 md:p-6 rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition">
+                <div class="bg-gradient-to-br from-amber-600 to-amber-500 text-white p-4 md:p-6 rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-white/80 text-xs uppercase font-bold tracking-wider">ក្នុងដំណើរការ</p>
@@ -96,11 +99,11 @@
                 <select id="dept-filter" onchange="renderTable()" class="px-4 py-2.5 border-2 border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition">
                     <option value="">ទាំងអស់ផ្នែក</option>
                 </select>
-                <button onclick="openAddModal()" class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full md:w-auto"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
+                <button onclick="openAddModal()" class="bg-gradient-to-r from-teal-600 to-teal-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full md:w-auto"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
             </div>
             <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-x-auto">
                 <table class="w-full text-xs md:text-sm">
-                    <thead class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white sticky top-0">
+                    <thead class="bg-gradient-to-r from-teal-600 to-teal-500 text-white sticky top-0">
                         <tr>
                             <th class="p-2 md:p-4 text-left font-semibold whitespace-nowrap">ផ្នែក</th>
                             <th class="p-2 md:p-4 text-left font-semibold whitespace-nowrap">បញ្ហា</th>
@@ -125,7 +128,7 @@
                         <p class="text-sm text-slate-600 mb-2">ចូលមើលឯកសារ CSV របស់អ្នក</p>
                         <p class="text-xs text-slate-500 mb-6">ឯកសារត្រូវមាន: ផ្នែក, បញ្ហា, ដំណោះស្រាយ, អ្នកទទួលខុសត្រូវ, ស្ថានភាព, កាលបរិច្ឆេទ</p>
                         <input type="file" id="file-input" class="hidden" accept=".csv">
-                        <button onclick="document.getElementById('file-input').click()" class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 md:px-8 py-2.5 md:py-3 rounded-xl text-sm font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full"><i class="fa-solid fa-upload mr-2"></i>ជ្រើសរើសឯកសារ CSV</button>
+                        <button onclick="document.getElementById('file-input').click()" class="bg-gradient-to-r from-teal-600 to-teal-500 text-white px-6 md:px-8 py-2.5 md:py-3 rounded-xl text-sm font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full"><i class="fa-solid fa-upload mr-2"></i>ជ្រើសរើសឯកសារ CSV</button>
                     </div>
                     <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-6 md:p-10 rounded-2xl border-2 border-slate-200 shadow-lg">
                         <h3 class="font-bold text-xl md:text-2xl mb-4 text-slate-800"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i>ព័ត៌មាន</h3>
@@ -170,7 +173,7 @@
             </div>
             <div class="mt-6 flex justify-end gap-3">
                 <button onclick="closeModal('add-modal')" class="px-4 md:px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition text-sm md:text-base">បោះបង់</button>
-                <button onclick="saveNewEntry()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base">រក្សាទុក</button>
+                <button onclick="saveNewEntry()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base">រក្សាទុក</button>
             </div>
         </div>
     </div>
@@ -190,7 +193,7 @@
             </div>
             <div class="mt-6 flex justify-end gap-3">
                 <button onclick="closeModal('edit-modal')" class="px-4 md:px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition text-sm md:text-base">បោះបង់</button>
-                <button onclick="saveEdit()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base">រក្សាទុក</button>
+                <button onclick="saveEdit()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base">រក្សាទុក</button>
             </div>
         </div>
     </div>
@@ -221,7 +224,7 @@
             <div class="mt-6 flex flex-col md:flex-row justify-end gap-3">
                 <button onclick="closeModal('duplicate-modal')" class="px-4 md:px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition text-sm md:text-base">បោះបង់</button>
                 <button onclick="confirmDuplicateImport(true)" class="px-4 md:px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base"><i class="fa-solid fa-filter mr-2"></i>ឆ្លងកាត់ស្ទួយ</button>
-                <button onclick="confirmDuplicateImport(false)" class="px-4 md:px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base"><i class="fa-solid fa-upload mr-2"></i>នាំចូលទាំងអស់</button>
+                <button onclick="confirmDuplicateImport(false)" class="px-4 md:px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base"><i class="fa-solid fa-upload mr-2"></i>នាំចូលទាំងអស់</button>
             </div>
         </div>
     </div>
