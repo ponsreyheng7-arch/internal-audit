@@ -8,12 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    
-    <!-- Firebase SDK (Modular) with Service Functions -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-        
+
+    <!-- Firebase SDK (Compatible Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script>
+        // 🔒 SECURITY NOTE:
+        // Client-side firebaseConfig is safe to expose (apiKey is not a secret).
+        // HOWEVER, you MUST lock down the project in Firebase Console:
+        //   1. Firestore Rules -> deny public access to "audit_issues"
+        //   2. Enable Firebase Authentication and require sign-in
+        //   3. NEVER commit service-account JSON or admin SDK keys to this repo
+        //   4. Add your deploy/service-account JSON to .gitignore
         const firebaseConfig = {
             apiKey: "AIzaSyDPK1LM-6ekEC6FVfRGFgdq7sFLOBRKnKU",
             authDomain: "internal-audit-clinic.firebaseapp.com",
@@ -22,100 +28,114 @@
             messagingSenderId: "316370804867",
             appId: "1:316370804867:web:fbd3c04e5ebfe7a13ffbb6"
         };
-        
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+
+        // Initialize Firebase when the SDK is available. The app still works locally without it.
+        let app = null;
+        let db = null;
         const COLLECTION_NAME = "audit_issues";
-        
+
+        if (window.firebase) {
+            app = firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("✅ Firebase initialized successfully!");
+        } else {
+            console.warn("Firebase SDK not loaded. LocalStorage mode is active.");
+        }
+
         // ✅ ទាញយក ទិន្នន័យទាំងអស់ ពី Firebase
-        window.loadAuditDataFromFirebase = async function() {
+        async function loadAuditDataFromFirebase() {
             try {
-                const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+                if (!db) return [];
+                const snapshot = await db.collection(COLLECTION_NAME).get();
                 const data = [];
-                querySnapshot.forEach(document => {
-                    data.push({ id: document.id, ...document.data() });
+                snapshot.forEach(doc => {
+                    data.push({ id: doc.id, ...doc.data() });
                 });
                 console.log("✅ Firebase: Loaded", data.length, "records");
                 return data;
             } catch (error) {
                 console.error("Error loading data:", error);
-                if (window.showToast) showToast("❌ មិនអាចទាញយក ទិន្នន័យពីលើ Firebase បានទេ");
+                showToast("❌ មិនអាចទាញយក ទិន្នន័យពីលើ Firebase បានទេ");
                 return [];
             }
-        };
+        }
 
         // ✅ បន្ថែម ធាតុថ្មី ទៅ Firebase
-        window.addAuditDataToFirebase = async function(entry) {
+        async function addAuditDataToFirebase(entry) {
             try {
-                const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+                if (!db) return null;
+                const docRef = await db.collection(COLLECTION_NAME).add({
                     dept: entry.dept,
                     problem: entry.problem,
                     solution: entry.solution,
                     pic: entry.pic,
                     status: entry.status,
                     date: entry.date,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp()
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log("✅ Firebase: Document added with ID:", docRef.id);
-                if (window.showToast) showToast("✅ បន្ថែមបញ្ហាថ្មីដោយជោគជ័យ!");
+                showToast("✅ បន្ថែមបញ្ហាថ្មីដោយជោគជ័យ!");
                 return docRef.id;
             } catch (error) {
                 console.error("Error adding document:", error);
-                if (window.showToast) showToast("❌ មិនអាចបន្ថែមទិន្នន័យក្នុង Firebase បានទេ");
+                showToast("❌ មិនអាចបន្ថែមទិន្នន័យក្នុង Firebase បានទេ");
                 return null;
             }
-        };
+        }
 
         // ✅ កែសម្រួល ធាតុក្នុង Firebase
-        window.updateAuditDataInFirebase = async function(docId, entry) {
+        async function updateAuditDataInFirebase(docId, entry) {
             try {
-                await updateDoc(doc(db, COLLECTION_NAME, docId), {
+                if (!db) return false;
+                await db.collection(COLLECTION_NAME).doc(docId).update({
                     dept: entry.dept,
                     problem: entry.problem,
                     solution: entry.solution,
                     pic: entry.pic,
                     status: entry.status,
                     date: entry.date,
-                    updatedAt: serverTimestamp()
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 console.log("✅ Firebase: Document updated:", docId);
-                if (window.showToast) showToast("✅ កែសម្រួលដោយជោគជ័យ!");
+                showToast("✅ កែសម្រួលដោយជោគជ័យ!");
                 return true;
             } catch (error) {
                 console.error("Error updating document:", error);
-                if (window.showToast) showToast("❌ មិនអាចកែសម្រួលបានទេ");
+                showToast("❌ មិនអាចកែសម្រួលបានទេ");
                 return false;
             }
-        };
+        }
 
         // ✅ លុប ធាតុ ពីលើ Firebase
-        window.deleteAuditDataFromFirebase = async function(docId) {
+        async function deleteAuditDataFromFirebase(docId) {
             try {
-                await deleteDoc(doc(db, COLLECTION_NAME, docId));
+                if (!db) return false;
+                await db.collection(COLLECTION_NAME).doc(docId).delete();
                 console.log("✅ Firebase: Document deleted:", docId);
-                if (window.showToast) showToast("✅ លុបដោយជោគជ័យ!");
+                showToast("✅ លុបដោយជោគជ័យ!");
                 return true;
             } catch (error) {
                 console.error("Error deleting document:", error);
-                if (window.showToast) showToast("❌ មិនអាចលុបបានទេ");
+                showToast("❌ មិនអាចលុបបានទេ");
                 return false;
             }
-        };
+        }
 
         // ✅ ពិនិត្យ Duplicate ក្នុង Firebase
-        window.checkDuplicateInFirebase = async function(dept, problem) {
+        async function checkDuplicateInFirebase(dept, problem) {
             try {
-                const q = query(collection(db, COLLECTION_NAME), where("dept", "==", dept), where("problem", "==", problem));
-                const querySnapshot = await getDocs(q);
-                return querySnapshot.size > 0;
+                if (!db) return false;
+                const snapshot = await db.collection(COLLECTION_NAME)
+                    .where("dept", "==", dept)
+                    .where("problem", "==", problem)
+                    .get();
+                return !snapshot.empty;
             } catch (error) {
                 console.error("Error checking duplicate:", error);
                 return false;
             }
-        };
-
-        console.log("✅ Firebase initialized successfully!");
+        }
     </script>
 
     <style>
@@ -347,17 +367,25 @@
     <script>
         let auditData = [];
         let isFirebaseReady = false;
+        const LOCAL_STORAGE_KEY = 'internalAuditData';
 
         // Initialize Firebase and load data
         document.addEventListener('DOMContentLoaded', async function() {
+            auditData = loadFromLocalStorage();
+            renderTable();
+
             try {
-                auditData = await loadAuditDataFromFirebase();
-                isFirebaseReady = true;
+                const firebaseData = await loadAuditDataFromFirebase();
+                isFirebaseReady = !!db;
+                if (firebaseData.length > 0) {
+                    auditData = firebaseData;
+                    saveToLocalStorage();
+                }
                 renderTable();
-                showToast("✅ ឯកសារ Firebase បានផ្ទុក!");
+                showToast(isFirebaseReady ? "✅ ឯកសារ Firebase បានផ្ទុក!" : "✅ LocalStorage បានដំណើរការ");
             } catch (error) {
                 console.error("Firebase initialization error:", error);
-                showToast("⚠️ មិនអាចភ្ជាប់ Firebase បានទេ");
+                showToast("⚠️ Firebase មិនដំណើរការ។ ប្រើ LocalStorage ជំនួស");
             }
         });
 
@@ -382,9 +410,17 @@
             });
         });
 
+        function loadFromLocalStorage() {
+            try {
+                return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+            } catch (error) {
+                console.error("Error loading local data:", error);
+                return [];
+            }
+        }
+
         function saveToLocalStorage() {
-            // Not used anymore - Firebase handles data persistence
-            console.log("Data saved to Firebase");
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(auditData));
         }
 
         function showToast(message) {
@@ -417,21 +453,22 @@
             const dept = document.getElementById('add-dept').value || '-';
             const prob = document.getElementById('add-problem').value;
             if(!prob) { showToast("❌ សូមបំពេញបញ្ហា!"); return; }
-            
+
             const newKey = `${dept}|${prob}`.toLowerCase();
-            
+
             // Check for duplicates
             const isDuplicate = auditData.some(item => {
                 const existKey = `${item.dept}|${item.problem}`.toLowerCase();
                 return newKey === existKey;
             });
-            
+
             if (isDuplicate) {
                 showToast("⚠️ ទិន្នន័យនេះស្ទួយនឹងទិន្នន័យដែលមាននៅក្នុងប្រព័ន្ធរួច!");
                 return;
             }
-            
+
             const newEntry = {
+                id: `local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                 dept: dept,
                 problem: prob,
                 solution: document.getElementById('add-solution').value || '-',
@@ -439,18 +476,22 @@
                 status: document.getElementById('add-status').value || '-',
                 date: document.getElementById('add-date').value || '-'
             };
-            
-            // Save to Firebase
+
+            auditData.push(newEntry);
+            saveToLocalStorage();
+            closeModal('add-modal');
+            renderTable();
+            showToast("✅ បានបន្ថែមបញ្ហាថ្មី!");
+
+            // Sync to Firebase when available
             if (isFirebaseReady) {
-                addAuditDataToFirebase(newEntry).then(() => {
-                    closeModal('add-modal');
-                    loadAuditDataFromFirebase().then(() => {
-                        renderTable();
-                        showToast("✅ បានបន្ថែមបញ្ហាថ្មីក្នុង Firebase!");
-                    });
+                addAuditDataToFirebase(newEntry).then(docId => {
+                    if (docId) {
+                        const entryIndex = auditData.findIndex(item => item.id === newEntry.id);
+                        if (entryIndex > -1) auditData[entryIndex].id = docId;
+                        saveToLocalStorage(); // Save the new Firebase ID
+                    }
                 });
-            } else {
-                showToast("❌ Firebase មិនរៀងរាល់ទេ។ សូមព្យាយាមម្តងទៀត");
             }
         }
 
@@ -458,155 +499,108 @@
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
-                parseExcelData(json);
+                await parseExcelData(json);
                 e.target.value = ''; // Reset file input
             };
             reader.readAsArrayBuffer(file);
         });
 
-        function parseExcelData(rows) {
-            let headerRowIndex = rows.findIndex(row => row.some(cell => String(cell).includes('ផ្នែក')));
-            if (headerRowIndex === -1) { showToast("រកមិនឃើញ Header!"); return; }
-            const headers = rows[headerRowIndex];
-            
-            const newEntries = rows.slice(headerRowIndex + 1).map(row => ({
-                dept: row[headers.findIndex(h => String(h).includes('ផ្នែក'))] || '-',
-                problem: row[headers.findIndex(h => String(h).includes('បញ្ហា'))] || '-',
-                solution: row[headers.findIndex(h => String(h).includes('ដំណោះស្រាយ'))] || '-',
-                pic: row[headers.findIndex(h => String(h).includes('អ្នកទទួលខុសត្រូវ'))] || '-',
-                status: row[headers.findIndex(h => String(h).includes('ស្ថានភាព'))] || '-',
-                date: row[headers.findIndex(h => String(h).includes('កាលបរិច្ឆេទ'))] || '-'
-            })).filter(item => item.problem !== '-');
-
-            // Check for duplicates between new entries and existing data
-            const duplicates = [];
-            newEntries.forEach((newItem, newIdx) => {
-                const newKey = `${newItem.dept}|${newItem.problem}`.toLowerCase();
-                
-                // Check against existing data
-                auditData.forEach((existingItem, existIdx) => {
-                    const existKey = `${existingItem.dept}|${existingItem.problem}`.toLowerCase();
-                    if (newKey === existKey) {
-                        duplicates.push({
-                            type: 'existing',
-                            newIdx: newIdx,
-                            existIdx: existIdx,
-                            dept: newItem.dept,
-                            problem: newItem.problem,
-                            existing: existingItem
-                        });
-                    }
-                });
-
-                // Check against other new entries
-                for (let i = 0; i < newIdx; i++) {
-                    const otherKey = `${newEntries[i].dept}|${newEntries[i].problem}`.toLowerCase();
-                    if (newKey === otherKey) {
-                        duplicates.push({
-                            type: 'internal',
-                            indices: [i, newIdx],
-                            dept: newItem.dept,
-                            problem: newItem.problem
-                        });
-                    }
-                }
-            });
-
-            // If duplicates found, show confirmation
-            if (duplicates.length > 0) {
-                showDuplicateWarning(newEntries, duplicates);
-            } else {
-                // No duplicates, proceed with import
-                auditData = [...auditData, ...newEntries];
-                saveToLocalStorage();
-                renderTable();
-                switchTab('registry');
-                showToast("បាននាំចូលទិន្នន័យជោគជ័យ!");
-            }
-        }
-
-        function showDuplicateWarning(newEntries, duplicates) {
-            window.pendingNewEntries = newEntries;
-            window.foundDuplicates = duplicates;
-
-            const content = document.getElementById('duplicate-content');
-            content.innerHTML = `
-                <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500 mb-4">
-                    <p class="text-yellow-700 font-bold"><i class="fa-solid fa-exclamation-triangle mr-2"></i>រកឃើញទិន្នន័យស្ទួយ!</p>
-                    <p class="text-sm text-yellow-600">ទិន្នន័យដែលនាំចូលមាន ${duplicates.length} ធាតុដែលស្ទួយគ្នា៖</p>
-                </div>
-                ${duplicates.map((dup, idx) => `
-                    <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
-                        <p class="text-sm font-bold text-red-700 mb-2"><i class="fa-solid fa-copy mr-2"></i>ស្ទួយ #${idx + 1}</p>
-                        <p class="text-sm text-slate-700"><strong>ផ្នែក:</strong> ${dup.dept}</p>
-                        <p class="text-sm text-slate-700 mb-2"><strong>បញ្ហា:</strong> ${dup.problem}</p>
-                        ${dup.type === 'existing' ? `<p class="text-xs text-orange-600">មាននៅក្នុងប្រព័ន្ធរួច</p>` : ''}
-                    </div>
-                `).join('')}
-            `;
-
-            document.getElementById('duplicate-modal').classList.remove('hidden');
-        }
-
-        function confirmDuplicateImport(skipDuplicates = false) {
-            if (!window.pendingNewEntries) return;
-
-            let entriesToAdd = window.pendingNewEntries;
-
-            if (skipDuplicates && window.foundDuplicates) {
-                const duplicateIndices = new Set();
-                window.foundDuplicates.forEach(dup => {
-                    if (dup.type === 'internal' || dup.type === 'existing') {
-                        duplicateIndices.add(dup.newIdx || dup.indices[0]);
-                    }
-                });
-                entriesToAdd = window.pendingNewEntries.filter((_, idx) => !duplicateIndices.has(idx));
+        // Reverted to a simpler, more stable CSV import function
+        async function parseExcelData(rows) {
+            if (!rows || rows.length === 0) {
+                showToast("ឯកសារ CSV ទំនេរ");
+                return;
             }
 
-            auditData = [...auditData, ...entriesToAdd];
+            const normalizeHeader = (value) => String(value ?? '').toLowerCase().replace(/\s+/g, '');
+            const findColumn = (headers, aliases, fallbackIndex) => {
+                const normalizedAliases = aliases.map(normalizeHeader);
+                const foundIndex = headers.findIndex(header => {
+                    const normalizedHeader = normalizeHeader(header);
+                    return normalizedAliases.some(alias => normalizedHeader.includes(alias));
+                });
+                return foundIndex >= 0 ? foundIndex : fallbackIndex;
+            };
+            const cellValue = (row, index, emptyValue = '-') => {
+                const value = row[index];
+                return value === undefined || value === null || String(value).trim() === '' ? emptyValue : String(value).trim();
+            };
+
+            const hasHeader = rows[0].map(h => normalizeHeader(h)).some(h => h.includes('បញ្ហា') || h.includes('problem'));
+            const headers = hasHeader ? rows[0] : [];
+
+            const columns = {
+                dept: findColumn(headers, ['ផ្នែក', 'department', 'dept'], 0),
+                problem: findColumn(headers, ['បញ្ហា', 'problem', 'issue'], 1),
+                solution: findColumn(headers, ['ដំណោះស្រាយ', 'solution', 'recommendation', 'action'], 2),
+                pic: findColumn(headers, ['អ្នកទទួលខុសត្រូវ', 'pic', 'responsible', 'owner'], 3),
+                status: findColumn(headers, ['ស្ថានភាព', 'status'], 4),
+                date: findColumn(headers, ['កាលបរិច្ឆេទ', 'date'], 5)
+            };
+
+            const dataRows = hasHeader ? rows.slice(1) : rows;
+            const newEntries = dataRows.map(row => ({
+                dept: cellValue(row, columns.dept),
+                problem: cellValue(row, columns.problem),
+                solution: cellValue(row, columns.solution),
+                pic: cellValue(row, columns.pic),
+                status: cellValue(row, columns.status, '_'),
+                date: cellValue(row, columns.date, '_')
+            })).filter(item => item.problem && item.problem.trim() !== '' && item.problem.trim() !== '-');
+
+            if (newEntries.length === 0) {
+                showToast("រកមិនឃើញទិន្នន័យសម្រាប់នាំចូលក្នុងឯកសារទេ។");
+                return;
+            }
+            auditData.push(...newEntries);
             saveToLocalStorage();
             renderTable();
             switchTab('registry');
-            closeModal('duplicate-modal');
-            showToast(`បាននាំចូលទិន្នន័យ ${entriesToAdd.length} ធាតុ (ឆ្លងកាត់ ${window.pendingNewEntries.length - entriesToAdd.length} ស្ទួយ)`);
-            
-            window.pendingNewEntries = null;
-            window.foundDuplicates = null;
+            showToast(`✅ បាននាំចូល ${newEntries.length} ធាតុដោយជោគជ័យ!`);
         }
-
+        
         function renderTable() {
+            window.auditData = auditData;
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const selectedDept = document.getElementById('dept-filter').value;
-            
-            const filteredData = auditData.filter(i => 
-                (i.dept.toLowerCase().includes(searchTerm) || i.problem.toLowerCase().includes(searchTerm)) &&
-                (selectedDept === '' || i.dept === selectedDept)
-            );
+            const deptFilter = document.getElementById('dept-filter');;
+            const textValue = (value) => String(value ?? '-');
+            const isResolvedStatus = (status) => textValue(status).includes('ដោះស្រាយ');
 
             // Update department filter options
-            const uniqueDepts = [...new Set(auditData.map(i => i.dept))].filter(d => d !== '-');
-            const deptFilter = document.getElementById('dept-filter');
+            const uniqueDepts = [...new Set(auditData.map(i => i.dept))].filter(d => d && d !== '-');
             const currentValue = deptFilter.value;
-            deptFilter.innerHTML = '<option value="">ទាំងអស់ផ្នែក</option>' + 
+            deptFilter.innerHTML = '<option value="">ទាំងអស់ផ្នែក</option>' +
                 uniqueDepts.map(d => `<option value="${d}">${d}</option>`).join('');
-            deptFilter.value = currentValue;
+            deptFilter.value = uniqueDepts.includes(currentValue) ? currentValue : '';
+            const selectedDept = deptFilter.value;
+
+            const filteredData = auditData.filter(i =>
+                ((i.dept || '').toLowerCase().includes(searchTerm) || (i.problem || '').toLowerCase().includes(searchTerm)) &&
+                (selectedDept === '' || i.dept === selectedDept)
+            );
 
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = filteredData.map((item, index) => {
                 const actualIndex = auditData.indexOf(item);
-                const statusColor = item.status.includes('ដោះស្រាយ') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+                const dept = textValue(item.dept);
+                const problem = textValue(item.problem);
+                const solution = textValue(item.solution);
+                const pic = textValue(item.pic);
+                const status = textValue(item.status);
+                const date = textValue(item.date);
+                const statusColor = isResolvedStatus(status) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
                 return `
                 <tr class="border-b border-slate-100 hover:bg-blue-50 transition duration-200">
-                    <td class="p-2 md:p-4 font-medium text-slate-700 text-xs md:text-sm">${item.dept}</td>
-                    <td class="p-2 md:p-4 text-slate-700 text-xs md:text-sm">${item.problem.length > 30 ? item.problem.substring(0, 30) + '...' : item.problem}</td>
-                    <td class="p-2 md:p-4 text-slate-700 hidden md:table-cell text-xs md:text-sm">${item.solution.length > 25 ? item.solution.substring(0, 25) + '...' : item.solution}</td>
-                    <td class="p-2 md:p-4 text-slate-700 hidden lg:table-cell text-xs md:text-sm">${item.pic}</td>
-                    <td class="p-2 md:p-4 text-xs md:text-sm"><span class="px-2 md:px-3 py-1 rounded-full text-xs font-medium ${statusColor}">${item.status}</span></td>
-                    <td class="p-2 md:p-4 text-slate-700 hidden sm:table-cell text-xs md:text-sm">${item.date}</td>
+                    <td class="p-2 md:p-4 font-medium text-slate-700 text-xs md:text-sm">${dept}</td>
+                    <td class="p-2 md:p-4 text-slate-700 text-xs md:text-sm">${problem.length > 30 ? problem.substring(0, 30) + '...' : problem}</td>
+                    <td class="p-2 md:p-4 text-slate-700 hidden md:table-cell text-xs md:text-sm">${solution.length > 25 ? solution.substring(0, 25) + '...' : solution}</td>
+                    <td class="p-2 md:p-4 text-slate-700 hidden lg:table-cell text-xs md:text-sm">${pic}</td>
+                    <td class="p-2 md:p-4 text-xs md:text-sm"><span class="px-2 md:px-3 py-1 rounded-full text-xs font-medium ${statusColor}">${status}</span></td>
+                    <td class="p-2 md:p-4 text-slate-700 hidden sm:table-cell text-xs md:text-sm">${date}</td>
                     <td class="p-2 md:p-4 text-xs md:text-sm">
                         <div class="flex gap-1 md:gap-2">
                             <button onclick="editItem(${actualIndex})" class="text-blue-500 hover:text-blue-700 font-medium transition"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -616,17 +610,18 @@
                 </tr>
             `;
             }).join('');
-            
+
             document.getElementById('stat-total').innerText = auditData.length;
-            document.getElementById('stat-done').innerText = auditData.filter(i => i.status.includes('ដោះស្រាយ')).length;
-            
+            document.getElementById('stat-done').innerText = auditData.filter(i => isResolvedStatus(i.status)).length;
+
             // Calculate pending and percentage
-            const doneCount = auditData.filter(i => i.status.includes('ដោះស្រាយ')).length;
+            const doneCount = auditData.filter(i => isResolvedStatus(i.status)).length;
             const pendingCount = auditData.length - doneCount;
             const percentage = auditData.length === 0 ? 0 : Math.round((doneCount / auditData.length) * 100);
-            
+
             document.getElementById('stat-pending').innerText = pendingCount;
-            document.getElementById('stat-percentage').innerText = percentage + '%';
+            const percentageElement = document.getElementById('stat-percentage');
+            if (percentageElement) percentageElement.innerText = percentage + '%';
         }
 
         // Functions for Edit/Delete remain the same as previously established
@@ -647,39 +642,37 @@
             const newDept = document.getElementById('edit-dept').value;
             const newProblem = document.getElementById('edit-problem').value;
             const newKey = `${newDept}|${newProblem}`.toLowerCase();
-            
+
             // Check for duplicates with other entries
             const isDuplicate = auditData.some((item, idx) => {
                 if (idx == index) return false; // Skip the current item
                 const existKey = `${item.dept}|${item.problem}`.toLowerCase();
                 return newKey === existKey;
             });
-            
+
             if (isDuplicate) {
                 showToast("⚠️ ទិន្នន័យនេះស្ទួយនឹងទិន្នន័យដែលមាននៅក្នុងប្រព័ន្ធរួច!");
                 return;
             }
-            
+
             const updatedEntry = {
-                dept: newDept,
+                dept: newDept || '-',
                 problem: newProblem,
-                solution: document.getElementById('edit-solution').value,
-                pic: document.getElementById('edit-pic').value,
-                status: document.getElementById('edit-status').value,
-                date: document.getElementById('edit-date').value
+                solution: document.getElementById('edit-solution').value || '-',
+                pic: document.getElementById('edit-pic').value || '-',
+                status: document.getElementById('edit-status').value || '-',
+                date: document.getElementById('edit-date').value || '-'
             };
-            
-            // Update in Firebase
-            if (isFirebaseReady && auditData[index].id) {
-                updateAuditDataInFirebase(auditData[index].id, updatedEntry).then(() => {
-                    closeModal('edit-modal');
-                    loadAuditDataFromFirebase().then(() => {
-                        renderTable();
-                        showToast("✅ បានកែសម្រួលបញ្ហាក្នុង Firebase!");
-                    });
-                });
-            } else {
-                showToast("❌ Firebase មិនរៀងរាល់ទេ។ សូមព្យាយាមម្តងទៀត");
+
+            auditData[index] = { ...auditData[index], ...updatedEntry }; // Merge to keep the ID
+            saveToLocalStorage();
+            closeModal('edit-modal');
+            renderTable();
+            showToast("✅ បានកែសម្រួលបញ្ហា!");
+
+            // Sync to Firebase when available
+            if (isFirebaseReady && auditData[index].id && !String(auditData[index].id).startsWith('local-')) {
+                updateAuditDataInFirebase(auditData[index].id, updatedEntry);
             }
         }
 
@@ -691,17 +684,16 @@
         function confirmDelete() {
             const index = document.getElementById('delete-index').value;
             const docId = auditData[index].id;
-            
-            if (isFirebaseReady && docId) {
-                deleteAuditDataFromFirebase(docId).then(() => {
-                    closeModal('delete-modal');
-                    loadAuditDataFromFirebase().then(() => {
-                        renderTable();
-                        showToast("✅ បានលុបបញ្ហាចេញពី Firebase!");
-                    });
-                });
-            } else {
-                showToast("❌ Firebase មិនរៀងរាល់ទេ។ សូមព្យាយាមម្តងទៀត");
+
+            const shouldSyncDelete = isFirebaseReady && docId && !String(docId).startsWith('local-');
+            auditData.splice(index, 1);
+            saveToLocalStorage();
+            closeModal('delete-modal');
+            renderTable();
+            showToast("✅ បានលុបបញ្ហា!");
+
+            if (shouldSyncDelete) {
+                deleteAuditDataFromFirebase(docId);
             }
         }
 
