@@ -13,13 +13,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script>
-        // 🔒 SECURITY NOTE:
-        // Client-side firebaseConfig is safe to expose (apiKey is not a secret).
-        // HOWEVER, you MUST lock down the project in Firebase Console:
-        //   1. Firestore Rules -> deny public access to "audit_issues"
-        //   2. Enable Firebase Authentication and require sign-in
-        //   3. NEVER commit service-account JSON or admin SDK keys to this repo
-        //   4. Add your deploy/service-account JSON to .gitignore
         const firebaseConfig = {
             apiKey: "AIzaSyDPK1LM-6ekEC6FVfRGFgdq7sFLOBRKnKU",
             authDomain: "internal-audit-clinic.firebaseapp.com",
@@ -29,7 +22,6 @@
             appId: "1:316370804867:web:fbd3c04e5ebfe7a13ffbb6"
         };
 
-        // Initialize Firebase when the SDK is available. The app still works locally without it.
         let app = null;
         let db = null;
         const COLLECTION_NAME = "audit_issues";
@@ -42,7 +34,6 @@
             console.warn("Firebase SDK not loaded. LocalStorage mode is active.");
         }
 
-        // ✅ ទាញយក ទិន្នន័យទាំងអស់ ពី Firebase
         async function loadAuditDataFromFirebase() {
             try {
                 if (!db) return [];
@@ -51,88 +42,59 @@
                 snapshot.forEach(doc => {
                     data.push({ id: doc.id, ...doc.data() });
                 });
-                console.log("✅ Firebase: Loaded", data.length, "records");
                 return data;
             } catch (error) {
                 console.error("Error loading data:", error);
-                showToast("❌ មិនអាចទាញយក ទិន្នន័យពីលើ Firebase បានទេ");
                 return [];
             }
         }
 
-        // ✅ បន្ថែម ធាតុថ្មី ទៅ Firebase
         async function addAuditDataToFirebase(entry) {
             try {
                 if (!db) return null;
                 const docRef = await db.collection(COLLECTION_NAME).add({
-                    dept: entry.dept,
-                    problem: entry.problem,
-                    solution: entry.solution,
-                    pic: entry.pic,
-                    status: entry.status,
-                    date: entry.date,
+                    dept: entry.dept || '-',
+                    problem: entry.problem || '',
+                    solution: entry.solution || '-',
+                    pic: entry.pic || '-',
+                    status: entry.status || '-',
+                    date: entry.date || '-',
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                console.log("✅ Firebase: Document added with ID:", docRef.id);
-                showToast("✅ បន្ថែមបញ្ហាថ្មីដោយជោគជ័យ!");
                 return docRef.id;
             } catch (error) {
                 console.error("Error adding document:", error);
-                showToast("❌ មិនអាចបន្ថែមទិន្នន័យក្នុង Firebase បានទេ");
                 return null;
             }
         }
 
-        // ✅ កែសម្រួល ធាតុក្នុង Firebase
         async function updateAuditDataInFirebase(docId, entry) {
             try {
                 if (!db) return false;
                 await db.collection(COLLECTION_NAME).doc(docId).update({
-                    dept: entry.dept,
-                    problem: entry.problem,
-                    solution: entry.solution,
-                    pic: entry.pic,
-                    status: entry.status,
-                    date: entry.date,
+                    dept: entry.dept || '-',
+                    problem: entry.problem || '',
+                    solution: entry.solution || '-',
+                    pic: entry.pic || '-',
+                    status: entry.status || '-',
+                    date: entry.date || '-',
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                console.log("✅ Firebase: Document updated:", docId);
-                showToast("✅ កែសម្រួលដោយជោគជ័យ!");
                 return true;
             } catch (error) {
                 console.error("Error updating document:", error);
-                showToast("❌ មិនអាចកែសម្រួលបានទេ");
                 return false;
             }
         }
 
-        // ✅ លុប ធាតុ ពីលើ Firebase
         async function deleteAuditDataFromFirebase(docId) {
             try {
                 if (!db) return false;
                 await db.collection(COLLECTION_NAME).doc(docId).delete();
-                console.log("✅ Firebase: Document deleted:", docId);
-                showToast("✅ លុបដោយជោគជ័យ!");
                 return true;
             } catch (error) {
                 console.error("Error deleting document:", error);
-                showToast("❌ មិនអាចលុបបានទេ");
-                return false;
-            }
-        }
-
-        // ✅ ពិនិត្យ Duplicate ក្នុង Firebase
-        async function checkDuplicateInFirebase(dept, problem) {
-            try {
-                if (!db) return false;
-                const snapshot = await db.collection(COLLECTION_NAME)
-                    .where("dept", "==", dept)
-                    .where("problem", "==", problem)
-                    .get();
-                return !snapshot.empty;
-            } catch (error) {
-                console.error("Error checking duplicate:", error);
                 return false;
             }
         }
@@ -153,6 +115,18 @@
         .stat-card.done:hover { box-shadow: 0 10px 30px rgba(184, 134, 11, 0.4); }
         input, textarea, select { transition: all 0.3s !important; }
         input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px rgba(10, 95, 79, 0.1) !important; border-color: #0a5f4f !important; }
+        
+        /* Smooth Mobile Navigation Drawer Overlay Drawer overrides */
+        @media (max-width: 767px) {
+            #sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+            }
+            #sidebar.open-mobile {
+                display: flex !important;
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col md:flex-row text-slate-800">
@@ -162,19 +136,27 @@
         <span id="toast-text"></span>
     </div>
 
-    <!-- Mobile Menu Toggle Button -->
-    <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-40 bg-slate-900 text-white p-2 rounded-lg">
-        <i class="fa-solid fa-bars text-xl"></i>
-    </button>
-
-    <!-- Mobile Menu Overlay -->
-    <div id="mobile-menu-overlay" class="hidden md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"></div>
-
-    <aside id="sidebar" class="hidden md:flex w-full md:w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-slate-200 p-6 flex flex-col shadow-2xl fixed md:static inset-0 z-35 md:z-0">
-        <div class="text-white font-bold text-lg md:text-xl mb-6 flex items-center justify-center">
-            <img src="./LOGO NEW OPTION CODE.png" alt="PHNOM PENH Eye Clinic" class="h-16 md:h-20 w-auto object-contain">
+    <!-- Mobile Top Header Bar -->
+    <div class="md:hidden bg-slate-900 w-full fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-4 z-40 shadow-md">
+        <button id="mobile-menu-btn" class="text-white p-2 rounded-lg hover:bg-slate-800 transition">
+            <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+        <div class="h-10">
+            <img src="./LOGO NEW OPTION CODE (2).png" alt="Logo" class="h-full w-auto object-contain" onerror="this.src='./LOGO NEW OPTION CODE (2).jpg'">
         </div>
-        <h2 class="text-center text-xs md:text-sm font-bold text-teal-300 mb-6 px-2">ប្រព័ន្ធសវនកម្ម</h2>
+        <div class="w-8"></div> <!-- Spacer balance -->
+    </div>
+
+    <!-- Mobile Menu Dark Backdrop Overlay -->
+    <div id="mobile-menu-overlay" class="hidden md:hidden fixed inset-0 bg-black bg-opacity-60 z-30 transition-opacity"></div>
+
+    <!-- Sidebar Layout Navigation -->
+    <aside id="sidebar" class="hidden md:flex w-full md:w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-slate-200 p-6 flex flex-col shadow-2xl fixed md:static top-0 bottom-0 left-0 z-35 md:z-0">
+        <div class="mb-6 flex items-center justify-center p-2">
+            <img src="./LOGO NEW OPTION CODE (2).png" alt="PHNOM PENH Eye Clinic" class="h-16 md:h-20 w-auto object-contain" onerror="this.src='./LOGO NEW OPTION CODE (2).jpg'">
+        </div>
+        <h2 class="text-center text-xs md:text-sm font-bold text-teal-300 mb-6 px-2">ប្រប្រព័ន្ធសវនកម្ម</h2>
+        
         <nav class="space-y-3 flex-1">
             <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-chart-line mr-3 text-teal-400"></i> ផ្ទាំងគ្រប់គ្រង</button>
             <button onclick="switchTab('registry')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-list mr-3 text-amber-400"></i> បញ្ជីបញ្ហា</button>
@@ -182,7 +164,7 @@
         </nav>
     </aside>
 
-    <main class="flex-1 p-4 md:p-8 overflow-y-auto mt-16 md:mt-0">
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto mt-20 md:mt-0">
         <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h2 id="page-title" class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">ផ្ទាំងគ្រប់គ្រង</h2>
             <div id="search-box" class="hidden w-full md:w-auto relative">
@@ -229,7 +211,6 @@
                     <select id="dept-filter" onchange="renderTable()" class="px-4 py-2.5 border-2 border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white transition">
                         <option value="">ទាំងអស់ផ្នែក</option>
                     </select>
-                    <button onclick="exportToExcelAll()" class="bg-gradient-to-r from-green-600 to-green-500 text-white px-4 md:px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 text-sm md:text-base whitespace-nowrap"><i class="fa-solid fa-download mr-2"></i>នាំចេញ Excel (ទាំងអស់)</button>
                 </div>
                 <button onclick="openAddModal()" class="bg-gradient-to-r from-teal-600 to-teal-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full md:w-auto"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
             </div>
@@ -275,16 +256,9 @@
                             </li>
                             <li class="flex items-start gap-3">
                                 <i class="fa-solid fa-check text-emerald-500 mt-1 flex-shrink-0"></i>
-                                <span>អ្នកអាចជ្រើសរើងឆ្លងកាត់ស្ទួយឬនាំចូលទាំងអស់</span>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <i class="fa-solid fa-check text-emerald-500 mt-1 flex-shrink-0"></i>
-                                <span>ទិន្នន័យនឹងរក្សាទុកក្នុង LocalStorage ដោយស្វ័យប្រវត្តិ</span>
+                                <span>ទិន្នន័យនឹងរក្សាទុកក្នុង Firebase និង LocalStorage ដោយស្វ័យប្រវត្តិ</span>
                             </li>
                         </ul>
-                        <div class="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                            <p class="text-xs text-blue-700"><strong>💡 គន្លឹះ:</strong> នៅពេលដែលអ្នកនាំចូលឯកសារ ប្រព័ន្ធនឹងពិនិត្យដើម្បីឃើញទិន្នន័យស្ទួយ ហើយសាកល្បងឱ្យអ្នក</p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -310,7 +284,6 @@
         </div>
     </div>
 
-    <!-- Edit/Delete Modals... -->
     <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-3 md:p-4 z-50 backdrop-blur-sm overflow-y-auto">
         <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 my-auto">
             <h3 class="text-xl md:text-2xl font-bold mb-6 text-slate-800">កែសម្រួលបញ្ហា</h3>
@@ -334,7 +307,7 @@
         <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-sm shadow-2xl text-center border border-slate-100 my-auto">
             <i class="fa-solid fa-exclamation-circle text-4xl md:text-5xl text-red-500 mb-4"></i>
             <h3 class="text-xl md:text-2xl font-bold mb-3 text-slate-800">លុបទិន្នន័យ</h3>
-            <p class="text-sm text-slate-600 mb-6">តើអ្នកពិតជាចង់លុបទិន្នន័យនេះមែនទេ? ក្រុមហ៊ុននេះមិនអាចត្រឡប់វិញបានទេ។</p>
+            <p class="text-sm text-slate-600 mb-6">តើអ្នកពិតជាចង់លុបទិន្នន័យនេះមែនទេ? ទិន្នន័យនេះមិនអាចត្រឡប់វិញបានទេ។</p>
             <input type="hidden" id="delete-index">
             <div class="flex justify-center gap-3">
                 <button onclick="closeModal('delete-modal')" class="px-4 md:px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition text-sm md:text-base">បោះបង់</button>
@@ -343,80 +316,70 @@
         </div>
     </div>
 
-    <!-- Modal for Duplicate Check on Import -->
-    <div id="duplicate-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-3 md:p-4 z-50 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-100 max-h-96 overflow-y-auto my-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg md:text-2xl font-bold text-slate-800">ពិនិត្យទិន្នន័យ CSV</h3>
-                <button onclick="closeModal('duplicate-modal')" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
-            </div>
-            <div id="duplicate-content" class="space-y-4">
-                <!-- Duplicate warnings will be shown here -->
-            </div>
-            <div class="mt-6 flex flex-col md:flex-row justify-end gap-3">
-                <button onclick="closeModal('duplicate-modal')" class="px-4 md:px-6 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition text-sm md:text-base">បោះបង់</button>
-                <button onclick="confirmDuplicateImport(true)" class="px-4 md:px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base"><i class="fa-solid fa-filter mr-2"></i>ឆ្លងកាត់ស្ទួយ</button>
-                <button onclick="confirmDuplicateImport(false)" class="px-4 md:px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-lg font-medium hover:shadow-lg transition text-sm md:text-base"><i class="fa-solid fa-upload mr-2"></i>នាំចូលទាំងអស់</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase Config & Services -->
-    <script src="./firebase-service.js"></script>
-
     <script>
         let auditData = [];
         let isFirebaseReady = false;
         const LOCAL_STORAGE_KEY = 'internalAuditData';
 
-        // Initialize Firebase and load data
-        document.addEventListener('DOMContentLoaded', async function() {
-            auditData = loadFromLocalStorage();
-            renderTable();
-
-            try {
-                const firebaseData = await loadAuditDataFromFirebase();
-                isFirebaseReady = !!db;
-                if (firebaseData.length > 0) {
-                    auditData = firebaseData;
-                    saveToLocalStorage();
-                }
-                renderTable();
-                showToast(isFirebaseReady ? "✅ ឯកសារ Firebase បានផ្ទុក!" : "✅ LocalStorage បានដំណើរការ");
-            } catch (error) {
-                console.error("Firebase initialization error:", error);
-                showToast("⚠️ Firebase មិនដំណើរការ។ ប្រើ LocalStorage ជំនួស");
-            }
-        });
-
-        // Mobile Menu Toggle
+        // ✅ FIXED MOBILE NAVIGATION HANDLING
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const sidebar = document.getElementById('sidebar');
         const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
 
         function toggleMobileMenu() {
-            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('open-mobile');
             mobileMenuOverlay.classList.toggle('hidden');
         }
 
-        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
-        mobileMenuOverlay?.addEventListener('click', toggleMobileMenu);
+        function closeMobileMenu() {
+            sidebar.classList.remove('open-mobile');
+            mobileMenuOverlay.classList.add('hidden');
+        }
 
-        // Close mobile menu when a tab is clicked
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                sidebar.classList.add('hidden');
-                mobileMenuOverlay.classList.add('hidden');
-            });
+        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
+        mobileMenuOverlay?.addEventListener('click', closeMobileMenu);
+
+        // Firebase Sync Engine
+        document.addEventListener('DOMContentLoaded', async function() {
+            auditData = loadFromLocalStorage();
+            renderTable();
+
+            try {
+                if (db) {
+                    isFirebaseReady = true;
+                    const firebaseData = await loadAuditDataFromFirebase();
+                    
+                    if (firebaseData.length > 0) {
+                        for (let localItem of auditData) {
+                            if (String(localItem.id).startsWith('local-')) {
+                                const matched = firebaseData.find(f => f.dept === localItem.dept && f.problem === localItem.problem);
+                                if (!matched) {
+                                    let serverId = await addAuditDataToFirebase(localItem);
+                                    if (serverId) localItem.id = serverId;
+                                } else {
+                                    localItem.id = matched.id;
+                                }
+                            }
+                        }
+                        const freshFirebaseData = await loadAuditDataFromFirebase();
+                        auditData = freshFirebaseData;
+                    } else {
+                        for (let localItem of auditData) {
+                            let serverId = await addAuditDataToFirebase(localItem);
+                            if (serverId) localItem.id = serverId;
+                        }
+                    }
+                    saveToLocalStorage();
+                    renderTable();
+                    showToast("✅ បានភ្ជាប់ និងធ្វើបច្ចុប្បន្នភាព Firebase!");
+                }
+            } catch (error) {
+                console.error("Firebase startup mismatch:", error);
+            }
         });
 
         function loadFromLocalStorage() {
-            try {
-                return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
-            } catch (error) {
-                console.error("Error loading local data:", error);
-                return [];
-            }
+            try { return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]'); } catch(e) { return []; }
         }
 
         function saveToLocalStorage() {
@@ -430,11 +393,17 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
+        // Modified SwitchTab to forcefully shut the navigation layout on mobile viewports
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
+            
+            // Set titles accurately
             document.getElementById('page-title').innerText = id === 'dashboard' ? 'ផ្ទាំងគ្រប់គ្រង' : (id === 'registry' ? 'បញ្ជីបញ្ហា' : 'នាំចូលទិន្នន័យ');
             document.getElementById('search-box').classList.toggle('hidden', id !== 'registry');
+            
+            // Smoothly collapse mobile interface
+            closeMobileMenu();
         }
 
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
@@ -455,15 +424,10 @@
             if(!prob) { showToast("❌ សូមបំពេញបញ្ហា!"); return; }
 
             const newKey = `${dept}|${prob}`.toLowerCase();
-
-            // Check for duplicates
-            const isDuplicate = auditData.some(item => {
-                const existKey = `${item.dept}|${item.problem}`.toLowerCase();
-                return newKey === existKey;
-            });
+            const isDuplicate = auditData.some(item => `${item.dept}|${item.problem}`.toLowerCase() === newKey);
 
             if (isDuplicate) {
-                showToast("⚠️ ទិន្នន័យនេះស្ទួយនឹងទិន្នន័យដែលមាននៅក្នុងប្រព័ន្ធរួច!");
+                showToast("⚠️ ទិន្នន័យនេះមាននៅក្នុងប្រព័ន្ធរួចហើយ!");
                 return;
             }
 
@@ -483,13 +447,13 @@
             renderTable();
             showToast("✅ បានបន្ថែមបញ្ហាថ្មី!");
 
-            // Sync to Firebase when available
             if (isFirebaseReady) {
                 addAuditDataToFirebase(newEntry).then(docId => {
                     if (docId) {
-                        const entryIndex = auditData.findIndex(item => item.id === newEntry.id);
-                        if (entryIndex > -1) auditData[entryIndex].id = docId;
-                        saveToLocalStorage(); // Save the new Firebase ID
+                        const idx = auditData.findIndex(item => item.id === newEntry.id);
+                        if (idx > -1) auditData[idx].id = docId;
+                        saveToLocalStorage();
+                        renderTable();
                     }
                 });
             }
@@ -504,77 +468,87 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
                 await parseExcelData(json);
-                e.target.value = ''; // Reset file input
+                e.target.value = '';
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // Reverted to a simpler, more stable CSV import function
         async function parseExcelData(rows) {
-            if (!rows || rows.length === 0) {
-                showToast("ឯកសារ CSV ទំនេរ");
-                return;
+            if (!rows || rows.length === 0) return;
+            rows = rows.filter(row => row.some(cell => String(cell || "").trim() !== ""));
+            if (rows.length <= 1) return;
+
+            const headers = rows[0].map(h => String(h).trim().toLowerCase());
+            const getIndex = (...names) => {
+                for (const name of names) {
+                    const index = headers.findIndex(h => h.includes(name.toLowerCase()));
+                    if (index !== -1) return index;
+                }
+                return -1;
+            };
+
+            const colDept = getIndex("department","dept","ផ្នែក");
+            const colProblem = getIndex("problem","issue","finding","បញ្ហា");
+            const colSolution = getIndex("solution","recommendation","action","ដំណោះស្រាយ");
+            const colPic = getIndex("pic","owner","responsible","អ្នកទទួលខុសត្រូវ");
+            const colStatus = getIndex("status","ស្ថានភាព");
+            const colDate = getIndex("date","កាលបរិច្ឆេទ");
+
+            let importedCount = 0;
+            let skippedCount = 0;
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const entry = {
+                    dept: colDept >= 0 ? String(row[colDept] || "-").trim() : "-",
+                    problem: colProblem >= 0 ? String(row[colProblem] || "").trim() : "",
+                    solution: colSolution >= 0 ? String(row[colSolution] || "-").trim() : "-",
+                    pic: colPic >= 0 ? String(row[colPic] || "-").trim() : "-",
+                    status: colStatus >= 0 ? String(row[colStatus] || "-").trim() : "-",
+                    date: colDate >= 0 ? String(row[colDate] || "-").trim() : "-"
+                };
+
+                if (entry.problem === "") continue;
+
+                const duplicate = auditData.some(item =>
+                    item.dept.trim().toLowerCase() === entry.dept.toLowerCase() &&
+                    item.problem.trim().toLowerCase() === entry.problem.toLowerCase()
+                );
+
+                if (duplicate) {
+                    skippedCount++;
+                    continue;
+                }
+
+                entry.id = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                auditData.push(entry);
+                importedCount++;
+
+                if (isFirebaseReady) {
+                    addAuditDataToFirebase(entry).then(docId => {
+                        if (docId) {
+                            entry.id = docId;
+                            saveToLocalStorage();
+                        }
+                    });
+                }
             }
 
-            const normalizeHeader = (value) => String(value ?? '').toLowerCase().replace(/\s+/g, '');
-            const findColumn = (headers, aliases, fallbackIndex) => {
-                const normalizedAliases = aliases.map(normalizeHeader);
-                const foundIndex = headers.findIndex(header => {
-                    const normalizedHeader = normalizeHeader(header);
-                    return normalizedAliases.some(alias => normalizedHeader.includes(alias));
-                });
-                return foundIndex >= 0 ? foundIndex : fallbackIndex;
-            };
-            const cellValue = (row, index, emptyValue = '-') => {
-                const value = row[index];
-                return value === undefined || value === null || String(value).trim() === '' ? emptyValue : String(value).trim();
-            };
-
-            const hasHeader = rows[0].map(h => normalizeHeader(h)).some(h => h.includes('បញ្ហា') || h.includes('problem'));
-            const headers = hasHeader ? rows[0] : [];
-
-            const columns = {
-                dept: findColumn(headers, ['ផ្នែក', 'department', 'dept'], 0),
-                problem: findColumn(headers, ['បញ្ហា', 'problem', 'issue'], 1),
-                solution: findColumn(headers, ['ដំណោះស្រាយ', 'solution', 'recommendation', 'action'], 2),
-                pic: findColumn(headers, ['អ្នកទទួលខុសត្រូវ', 'pic', 'responsible', 'owner'], 3),
-                status: findColumn(headers, ['ស្ថានភាព', 'status'], 4),
-                date: findColumn(headers, ['កាលបរិច្ឆេទ', 'date'], 5)
-            };
-
-            const dataRows = hasHeader ? rows.slice(1) : rows;
-            const newEntries = dataRows.map(row => ({
-                dept: cellValue(row, columns.dept),
-                problem: cellValue(row, columns.problem),
-                solution: cellValue(row, columns.solution),
-                pic: cellValue(row, columns.pic),
-                status: cellValue(row, columns.status, '_'),
-                date: cellValue(row, columns.date, '_')
-            })).filter(item => item.problem && item.problem.trim() !== '' && item.problem.trim() !== '-');
-
-            if (newEntries.length === 0) {
-                showToast("រកមិនឃើញទិន្នន័យសម្រាប់នាំចូលក្នុងឯកសារទេ។");
-                return;
-            }
-            auditData.push(...newEntries);
             saveToLocalStorage();
             renderTable();
-            switchTab('registry');
-            showToast(`✅ បាននាំចូល ${newEntries.length} ធាតុដោយជោគជ័យ!`);
+            switchTab("registry");
+            showToast(`✅ បាននាំចូល ${importedCount} ជួរ | ឆ្លងកាត់ស្ទួយ ${skippedCount}`);
         }
-        
+
         function renderTable() {
-            window.auditData = auditData;
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            const deptFilter = document.getElementById('dept-filter');;
+            const deptFilter = document.getElementById('dept-filter');
             const textValue = (value) => String(value ?? '-');
             const isResolvedStatus = (status) => textValue(status).includes('ដោះស្រាយ');
 
-            // Update department filter options
             const uniqueDepts = [...new Set(auditData.map(i => i.dept))].filter(d => d && d !== '-');
             const currentValue = deptFilter.value;
-            deptFilter.innerHTML = '<option value="">ទាំងអស់ផ្នែក</option>' +
-                uniqueDepts.map(d => `<option value="${d}">${d}</option>`).join('');
+            deptFilter.innerHTML = '<option value="">ទាំងអស់ផ្នែក</option>' + uniqueDepts.map(d => `<option value="${d}">${d}</option>`).join('');
             deptFilter.value = uniqueDepts.includes(currentValue) ? currentValue : '';
             const selectedDept = deptFilter.value;
 
@@ -584,7 +558,7 @@
             );
 
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = filteredData.map((item, index) => {
+            tbody.innerHTML = filteredData.map((item) => {
                 const actualIndex = auditData.indexOf(item);
                 const dept = textValue(item.dept);
                 const problem = textValue(item.problem);
@@ -593,6 +567,7 @@
                 const status = textValue(item.status);
                 const date = textValue(item.date);
                 const statusColor = isResolvedStatus(status) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+                
                 return `
                 <tr class="border-b border-slate-100 hover:bg-blue-50 transition duration-200">
                     <td class="p-2 md:p-4 font-medium text-slate-700 text-xs md:text-sm">${dept}</td>
@@ -607,24 +582,15 @@
                             <button onclick="deleteItem(${actualIndex})" class="text-red-500 hover:text-red-700 font-medium transition"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </td>
-                </tr>
-            `;
+                </tr>`;
             }).join('');
 
             document.getElementById('stat-total').innerText = auditData.length;
-            document.getElementById('stat-done').innerText = auditData.filter(i => isResolvedStatus(i.status)).length;
-
-            // Calculate pending and percentage
             const doneCount = auditData.filter(i => isResolvedStatus(i.status)).length;
-            const pendingCount = auditData.length - doneCount;
-            const percentage = auditData.length === 0 ? 0 : Math.round((doneCount / auditData.length) * 100);
-
-            document.getElementById('stat-pending').innerText = pendingCount;
-            const percentageElement = document.getElementById('stat-percentage');
-            if (percentageElement) percentageElement.innerText = percentage + '%';
+            document.getElementById('stat-done').innerText = doneCount;
+            document.getElementById('stat-pending').innerText = auditData.length - doneCount;
         }
 
-        // Functions for Edit/Delete remain the same as previously established
         function editItem(index) {
             const item = auditData[index];
             document.getElementById('edit-index').value = index;
@@ -639,24 +605,18 @@
 
         function saveEdit() {
             const index = document.getElementById('edit-index').value;
-            const newDept = document.getElementById('edit-dept').value;
+            const newDept = document.getElementById('edit-dept').value || '-';
             const newProblem = document.getElementById('edit-problem').value;
-            const newKey = `${newDept}|${newProblem}`.toLowerCase();
-
-            // Check for duplicates with other entries
-            const isDuplicate = auditData.some((item, idx) => {
-                if (idx == index) return false; // Skip the current item
-                const existKey = `${item.dept}|${item.problem}`.toLowerCase();
-                return newKey === existKey;
-            });
+            
+            const isDuplicate = auditData.some((item, idx) => idx != index && `${item.dept}|${item.problem}`.toLowerCase() === `${newDept}|${newProblem}`.toLowerCase());
 
             if (isDuplicate) {
-                showToast("⚠️ ទិន្នន័យនេះស្ទួយនឹងទិន្នន័យដែលមាននៅក្នុងប្រព័ន្ធរួច!");
+                showToast("⚠️ ទិន្នន័យនេះមាននៅក្នុងប្រព័ន្ធរួចហើយ!");
                 return;
             }
 
             const updatedEntry = {
-                dept: newDept || '-',
+                dept: newDept,
                 problem: newProblem,
                 solution: document.getElementById('edit-solution').value || '-',
                 pic: document.getElementById('edit-pic').value || '-',
@@ -664,13 +624,12 @@
                 date: document.getElementById('edit-date').value || '-'
             };
 
-            auditData[index] = { ...auditData[index], ...updatedEntry }; // Merge to keep the ID
+            auditData[index] = { ...auditData[index], ...updatedEntry };
             saveToLocalStorage();
             closeModal('edit-modal');
             renderTable();
             showToast("✅ បានកែសម្រួលបញ្ហា!");
 
-            // Sync to Firebase when available
             if (isFirebaseReady && auditData[index].id && !String(auditData[index].id).startsWith('local-')) {
                 updateAuditDataInFirebase(auditData[index].id, updatedEntry);
             }
@@ -683,9 +642,12 @@
 
         function confirmDelete() {
             const index = document.getElementById('delete-index').value;
-            const docId = auditData[index].id;
+            const targetItem = auditData[index];
+            if (!targetItem) { closeModal('delete-modal'); return; }
 
+            const docId = targetItem.id;
             const shouldSyncDelete = isFirebaseReady && docId && !String(docId).startsWith('local-');
+
             auditData.splice(index, 1);
             saveToLocalStorage();
             closeModal('delete-modal');
@@ -696,8 +658,6 @@
                 deleteAuditDataFromFirebase(docId);
             }
         }
-
-        renderTable();
     </script>
 </body>
 </html>
