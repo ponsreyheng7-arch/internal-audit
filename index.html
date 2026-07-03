@@ -343,42 +343,60 @@
             mobileMenuOverlay.classList.add('hidden');
         }
 
-        // Firebase Sync Engine Integration
+       // 🎯 កូដថ្មីផ្ទៀងផ្ទាត់ និងទាញទិន្នន័យផ្ទាល់ពី Firebase ពេលបើកវេបសាយដំបូង
         document.addEventListener('DOMContentLoaded', async function() {
+            // ១. បង្ហាញទិន្នន័យពី Local មុនដើម្បីកុំឱ្យអេក្រង់ទទេ
             auditData = loadFromLocalStorage();
             renderTable();
 
             try {
-                if (typeof db !== 'undefined' && db) {
+                if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                    db = firebase.firestore();
                     isFirebaseReady = true;
+                    console.log("🔥 Firebase Sync Active");
+
+                    // ២. ទាញទិន្នន័យផ្ទាល់ពី Firebase Server មកភ្លាមៗ
                     const firebaseData = await loadAuditDataFromFirebase();
                     
                     if (firebaseData.length > 0) {
+                        // រួមបញ្ចូលទិន្នន័យរវាង Local និង Server
+                        let updatedList = [...firebaseData];
+                        
+                        // បើមានទិន្នន័យ Local ណាដែលមិនទាន់បានរុញឡើង Server ឱ្យរុញឡើងឥឡូវនេះ
                         for (let localItem of auditData) {
                             if (String(localItem.id).startsWith('local-')) {
-                                const matched = firebaseData.find(f => f.dept === localItem.dept && f.problem === localItem.problem);
+                                const matched = firebaseData.find(f => f.problem === localItem.problem && f.dept === localItem.dept);
                                 if (!matched) {
                                     let serverId = await addAuditDataToFirebase(localItem);
-                                    if (serverId) localItem.id = serverId;
-                                } else {
-                                    localItem.id = matched.id;
+                                    if (serverId) {
+                                        localItem.id = serverId;
+                                        updatedList.push(localItem);
+                                    }
                                 }
                             }
                         }
-                        const freshFirebaseData = await loadAuditDataFromFirebase();
-                        auditData = freshFirebaseData;
+                        auditData = updatedList;
                     } else {
+                        // បើនៅលើ Server គ្មានទិន្នន័យទាល់តែសោះ តែលើម៉ាស៊ីនយើងមាន ឱ្យរុញឡើងទាំងអស់
                         for (let localItem of auditData) {
                             let serverId = await addAuditDataToFirebase(localItem);
                             if (serverId) localItem.id = serverId;
                         }
                     }
+                    
+                    // ៣. រៀបចំលំដាប់លំដោយទិន្នន័យតាមកាលបរិច្ឆេទបង្កើត (លំដាប់ថ្មីនៅលើគេ)
+                    auditData.sort((a, b) => {
+                        let dateA = a.createdAt ? (a.createdAt.seconds || 0) : 0;
+                        let dateB = b.createdAt ? (b.createdAt.seconds || 0) : 0;
+                        return dateB - dateA;
+                    });
+
                     saveToLocalStorage();
                     renderTable();
-                    showToast("✅ បានភ្ជាប់ និងធ្វើបច្ចុប្បន្នភាព Firebase!");
+                    showToast("🔄 បានធ្វើបច្ចុប្បន្នភាពទិន្នន័យពី Server!");
                 }
             } catch (error) {
-                console.error("Firebase startup mismatch:", error);
+                console.error("Firebase sync error:", error);
             }
         });
 
