@@ -575,7 +575,10 @@
 
             const uniqueDepts = [...new Set(auditData.map(i => i.dept))].filter(d => d && d !== '-');
             const currentValue = deptFilter.value;
-            deptFilter.innerHTML = '<option value="">ទាំងអស់ផ្នែក</option>' + uniqueDepts.map(d => `<option value="${d}">${d}</option>`).join('');
+            
+            // 🎯 កែប្រែពាក្យត្រង់ចំណុចនេះទៅជា "ផ្នែកទាំងអស់" ដើម្បីកុំឱ្យវា Overwrite ពាក្យចាស់មកវិញ
+            deptFilter.innerHTML = '<option value="">ផ្នែកទាំងអស់</option>' + uniqueDepts.map(d => `<option value="${d}">${d}</option>`).join('');
+            
             deptFilter.value = uniqueDepts.includes(currentValue) ? currentValue : '';
             const selectedDept = deptFilter.value;
 
