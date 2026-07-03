@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-    <!-- Firebase SDK (Compatible Version) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script>
@@ -26,12 +25,14 @@
         let db = null;
         const COLLECTION_NAME = "audit_issues";
 
-        if (window.firebase) {
-            app = firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            console.log("✅ Firebase initialized successfully!");
-        } else {
-            console.warn("Firebase SDK not loaded. LocalStorage mode is active.");
+        try {
+            if (typeof firebase !== 'undefined') {
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                console.log("✅ Firebase initialized successfully!");
+            }
+        } catch (e) {
+            console.warn("Firebase SDK not loaded. LocalStorage mode active.", e);
         }
 
         async function loadAuditDataFromFirebase() {
@@ -116,14 +117,20 @@
         input, textarea, select { transition: all 0.3s !important; }
         input:focus, textarea:focus, select:focus { box-shadow: 0 0 0 3px rgba(10, 95, 79, 0.1) !important; border-color: #0a5f4f !important; }
         
-        /* Smooth Mobile Navigation Drawer Overlay Drawer overrides */
+        /* Fixed Mobile Layout Control Overlay Layer */
         @media (max-width: 767px) {
             #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 260px;
                 transform: translateX(-100%);
                 transition: transform 0.3s ease-in-out;
+                display: flex !important;
+                z-index: 50;
             }
             #sidebar.open-mobile {
-                display: flex !important;
                 transform: translateX(0);
             }
         }
@@ -136,26 +143,23 @@
         <span id="toast-text"></span>
     </div>
 
-    <!-- Mobile Top Header Bar -->
     <div class="md:hidden bg-slate-900 w-full fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-4 z-40 shadow-md">
-        <button id="mobile-menu-btn" class="text-white p-2 rounded-lg hover:bg-slate-800 transition">
+        <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="text-white p-2 rounded-lg hover:bg-slate-800 transition">
             <i class="fa-solid fa-bars text-xl"></i>
         </button>
         <div class="h-10">
             <img src="./LOGO NEW OPTION CODE.png" alt="Logo" class="h-full w-auto object-contain" onerror="this.src='./LOGO NEW OPTION CODE (2).jpg'">
         </div>
-        <div class="w-8"></div> <!-- Spacer balance -->
+        <div class="w-8"></div> 
     </div>
 
-    <!-- Mobile Menu Dark Backdrop Overlay -->
-    <div id="mobile-menu-overlay" class="hidden md:hidden fixed inset-0 bg-black bg-opacity-60 z-30 transition-opacity"></div>
+    <div id="mobile-menu-overlay" onclick="closeMobileMenu()" class="hidden fixed inset-0 bg-black bg-opacity-60 z-30 transition-opacity md:hidden"></div>
 
-    <!-- Sidebar Layout Navigation -->
     <aside id="sidebar" class="hidden md:flex w-full md:w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-slate-200 p-6 flex flex-col shadow-2xl fixed md:static top-0 bottom-0 left-0 z-35 md:z-0">
         <div class="mb-6 flex items-center justify-center p-2">
             <img src="./LOGO NEW OPTION CODE.png" alt="PHNOM PENH Eye Clinic" class="h-16 md:h-20 w-auto object-contain" onerror="this.src='./LOGO NEW OPTION CODE (2).jpg'">
         </div>
-        <h2 class="text-center text-xs md:text-sm font-bold text-teal-300 mb-6 px-2">ប្រប្រព័ន្ធសវនកម្ម</h2>
+        <h2 class="text-center text-xs md:text-sm font-bold text-teal-300 mb-6 px-2">ប្រព័ន្ធសវនកម្មផ្ទៃក្នុង</h2>
         
         <nav class="space-y-3 flex-1">
             <button onclick="switchTab('dashboard')" class="nav-btn w-full text-left p-3 rounded-lg hover:bg-slate-700 transition duration-300"><i class="fa-solid fa-chart-line mr-3 text-teal-400"></i> ផ្ទាំងគ្រប់គ្រង</button>
@@ -212,7 +216,12 @@
                         <option value="">ទាំងអស់ផ្នែក</option>
                     </select>
                 </div>
-                <button onclick="openAddModal()" class="bg-gradient-to-r from-teal-600 to-teal-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 transform hover:scale-105 w-full md:w-auto"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button onclick="exportToExcelFormat()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-file-excel text-base"></i> ទាញយកទិន្នន័យ (Excel)
+                    </button>
+                    <button onclick="openAddModal()" class="bg-gradient-to-r from-teal-600 to-teal-500 text-white px-6 py-2.5 rounded-lg font-medium hover:shadow-lg transition duration-300 w-full sm:w-auto"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមបញ្ហាថ្មី</button>
+                </div>
             </div>
             <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-x-auto">
                 <table class="w-full text-xs md:text-sm">
@@ -265,7 +274,6 @@
         </section>
     </main>
 
-    <!-- Modals (Add, Edit, Delete) -->
     <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-3 md:p-4 z-50 backdrop-blur-sm overflow-y-auto">
         <div class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 my-auto">
             <h3 class="text-xl md:text-2xl font-bold mb-6 text-slate-800">បន្ថែមបញ្ហាថ្មី</h3>
@@ -321,11 +329,10 @@
         let isFirebaseReady = false;
         const LOCAL_STORAGE_KEY = 'internalAuditData';
 
-        // ✅ FIXED MOBILE NAVIGATION HANDLING
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const sidebar = document.getElementById('sidebar');
         const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
 
+        // Toggle functions for layout navigation drawer
         function toggleMobileMenu() {
             sidebar.classList.toggle('open-mobile');
             mobileMenuOverlay.classList.toggle('hidden');
@@ -336,16 +343,13 @@
             mobileMenuOverlay.classList.add('hidden');
         }
 
-        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
-        mobileMenuOverlay?.addEventListener('click', closeMobileMenu);
-
-        // Firebase Sync Engine
+        // Firebase Sync Engine Integration
         document.addEventListener('DOMContentLoaded', async function() {
             auditData = loadFromLocalStorage();
             renderTable();
 
             try {
-                if (db) {
+                if (typeof db !== 'undefined' && db) {
                     isFirebaseReady = true;
                     const firebaseData = await loadAuditDataFromFirebase();
                     
@@ -393,16 +397,13 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
-        // Modified SwitchTab to forcefully shut the navigation layout on mobile viewports
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
             
-            // Set titles accurately
             document.getElementById('page-title').innerText = id === 'dashboard' ? 'ផ្ទាំងគ្រប់គ្រង' : (id === 'registry' ? 'បញ្ជីបញ្ហា' : 'នាំចូលទិន្នន័យ');
             document.getElementById('search-box').classList.toggle('hidden', id !== 'registry');
             
-            // Smoothly collapse mobile interface
             closeMobileMenu();
         }
 
@@ -459,7 +460,7 @@
             }
         }
 
-        document.getElementById('file-input').addEventListener('change', (e) => {
+        document.getElementById('file-input')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -526,10 +527,7 @@
 
                 if (isFirebaseReady) {
                     addAuditDataToFirebase(entry).then(docId => {
-                        if (docId) {
-                            entry.id = docId;
-                            saveToLocalStorage();
-                        }
+                        if (docId) { entry.id = docId; saveToLocalStorage(); }
                     });
                 }
             }
@@ -538,6 +536,35 @@
             renderTable();
             switchTab("registry");
             showToast(`✅ បាននាំចូល ${importedCount} ជួរ | ឆ្លងកាត់ស្ទួយ ${skippedCount}`);
+        }
+
+        // Added Excel Format Data Export Logic Module
+        function exportToExcelFormat() {
+            if (auditData.length === 0) {
+                showToast("⚠️ គ្មានទិន្នន័យសម្រាប់ទាញចេញឡើយ!");
+                return;
+            }
+
+            const printableRows = auditData.map(item => ({
+                "ផ្នែក / Department": item.dept,
+                "បញ្ហា / Finding Issue": item.problem,
+                "ដំណោះស្រាយ / Strategic Solution": item.solution,
+                "អ្នកទទួលខុសត្រូវ / PIC": item.pic,
+                "ស្ថានភាព / Status": item.status,
+                "កាលបរិច្ឆេទ / Date": item.date
+            }));
+
+            try {
+                const worksheet = XLSX.utils.json_to_sheet(printableRows);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Internal Audit");
+                
+                XLSX.writeFile(workbook, `PPEC_Internal_Audit_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+                showToast("📊 ទាញយកឯកសារ Excel រួចរាល់!");
+            } catch (err) {
+                showToast("❌ ការទាញយកឯកសារមានបញ្ហា!");
+                console.error(err);
+            }
         }
 
         function renderTable() {
